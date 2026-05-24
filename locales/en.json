@@ -240,5 +240,19 @@
   "admin_analytics_privacy_note": "Analytics are aggregated from metadata and audit event types only; plaintext secrets, file contents, passphrases, tokens, and generated links are not stored here.",
   "footer_copyright": "© 2026 Ephemeral Link. All rights reserved.",
   "created_email_sent": "The link email was sent. Copy the link here too if you want a backup.",
-  "created_email_failed": "The link was created, but email delivery failed. Copy and send the link manually."
+  "created_email_failed": "The link was created, but email delivery failed. Copy and send the link manually.",
+  "audit_filter_event": "Event",
+  "audit_filter_result": "Result",
+  "audit_filter_all_results": "All results",
+  "audit_filter_actor": "Actor contains",
+  "audit_filter_search": "Search",
+  "audit_filter_search_placeholder": "target, details, IP...",
+  "apply_filters": "Apply filters",
+  "clear_filters": "Clear filters",
+  "audit_showing": "Showing",
+  "audit_of": "of",
+  "audit_pagination_label": "Audit log pages",
+  "previous_page": "Previous",
+  "next_page": "Next",
+  "page_label": "Page"
 }

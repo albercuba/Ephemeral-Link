@@ -311,15 +311,100 @@ func (a *App) admin(w http.ResponseWriter, r *http.Request) {
 		a.bad(w, r, err)
 		return
 	}
-	auditEvents, err := a.store.ListAuditEvents(r.Context(), 200)
+	allAuditEvents, err := a.store.ListAuditEvents(r.Context(), 500)
 	if err != nil {
 		a.bad(w, r, err)
 		return
 	}
-	analytics := buildAdminAnalytics(items, uploadRequests, auditEvents)
+	auditPage := buildAuditPage(r, allAuditEvents)
+	analytics := buildAdminAnalytics(items, uploadRequests, allAuditEvents)
 	disk := diskInfo(a.cfg.StoragePath)
 	message := adminSavedMessage(a.t(r, "settings_saved_"+r.URL.Query().Get("saved")))
-	a.render(w, r, 200, "admin.html", Page{Title: "Admin", User: user, Items: items, UploadRequests: uploadRequests, AuditEvents: auditEvents, HasLinks: len(items)+len(uploadRequests) > 0, Users: users, Integration: integration, Disk: disk, Analytics: analytics, Message: message})
+	a.render(w, r, 200, "admin.html", Page{Title: "Admin", User: user, Items: items, UploadRequests: uploadRequests, AuditEvents: auditPage.Events, AuditFilterEvent: auditPage.Event, AuditFilterResult: auditPage.Result, AuditFilterActor: auditPage.Actor, AuditFilterQuery: auditPage.Query, AuditPage: auditPage.Page, AuditTotal: auditPage.Total, AuditStart: auditPage.Start, AuditEnd: auditPage.End, AuditPrevURL: auditPage.PrevURL, AuditNextURL: auditPage.NextURL, AuditHasPrev: auditPage.HasPrev, AuditHasNext: auditPage.HasNext, HasLinks: len(items)+len(uploadRequests) > 0, Users: users, Integration: integration, Disk: disk, Analytics: analytics, Message: message})
+}
+
+type auditPageData struct {
+	Events  []redisstore.AuditEvent
+	Event   string
+	Result  string
+	Actor   string
+	Query   string
+	Page    int
+	Total   int
+	Start   int
+	End     int
+	PrevURL string
+	NextURL string
+	HasPrev bool
+	HasNext bool
+}
+
+const auditPageSize = 50
+
+func buildAuditPage(r *http.Request, events []redisstore.AuditEvent) auditPageData {
+	filters := auditPageData{Event: strings.TrimSpace(r.URL.Query().Get("audit_event")), Result: strings.TrimSpace(r.URL.Query().Get("audit_result")), Actor: strings.TrimSpace(r.URL.Query().Get("audit_actor")), Query: strings.TrimSpace(r.URL.Query().Get("audit_q")), Page: 1}
+	if page, err := strconv.Atoi(r.URL.Query().Get("audit_page")); err == nil && page > 0 {
+		filters.Page = page
+	}
+	filtered := make([]redisstore.AuditEvent, 0, len(events))
+	query := strings.ToLower(filters.Query)
+	actor := strings.ToLower(filters.Actor)
+	for _, event := range events {
+		if filters.Event != "" && event.Event != filters.Event {
+			continue
+		}
+		if filters.Result != "" && event.Result != filters.Result {
+			continue
+		}
+		if actor != "" && !strings.Contains(strings.ToLower(event.Actor), actor) {
+			continue
+		}
+		if query != "" {
+			haystack := strings.ToLower(strings.Join([]string{event.Event, event.Target, event.Result, event.Details, event.IP, event.Actor}, " "))
+			if !strings.Contains(haystack, query) {
+				continue
+			}
+		}
+		filtered = append(filtered, event)
+	}
+	filters.Total = len(filtered)
+	pages := (filters.Total + auditPageSize - 1) / auditPageSize
+	if pages == 0 {
+		pages = 1
+	}
+	if filters.Page > pages {
+		filters.Page = pages
+	}
+	start := (filters.Page - 1) * auditPageSize
+	end := start + auditPageSize
+	if end > filters.Total {
+		end = filters.Total
+	}
+	if filters.Total > 0 {
+		filters.Start = start + 1
+		filters.End = end
+		filters.Events = filtered[start:end]
+	}
+	filters.HasPrev = filters.Page > 1
+	filters.HasNext = filters.Page < pages
+	if filters.HasPrev {
+		filters.PrevURL = auditPageURL(r.URL.Query(), filters.Page-1)
+	}
+	if filters.HasNext {
+		filters.NextURL = auditPageURL(r.URL.Query(), filters.Page+1)
+	}
+	return filters
+}
+
+func auditPageURL(values url.Values, page int) string {
+	copy := url.Values{}
+	for key, vals := range values {
+		for _, val := range vals {
+			copy.Add(key, val)
+		}
+	}
+	copy.Set("audit_page", strconv.Itoa(page))
+	return "/admin?" + copy.Encode() + "#audit-logs"
 }
 
 func buildAdminAnalytics(items []redisstore.Item, uploadRequests []redisstore.UploadRequest, auditEvents []redisstore.AuditEvent) AdminAnalytics {

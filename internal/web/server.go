@@ -51,6 +51,18 @@ type Page struct {
 	Items                                                                                       []redisstore.Item
 	UploadRequests                                                                              []redisstore.UploadRequest
 	AuditEvents                                                                                 []redisstore.AuditEvent
+	AuditFilterEvent                                                                            string
+	AuditFilterResult                                                                           string
+	AuditFilterActor                                                                            string
+	AuditFilterQuery                                                                            string
+	AuditPage                                                                                   int
+	AuditTotal                                                                                  int
+	AuditStart                                                                                  int
+	AuditEnd                                                                                    int
+	AuditPrevURL                                                                                string
+	AuditNextURL                                                                                string
+	AuditHasPrev                                                                                bool
+	AuditHasNext                                                                                bool
 	HasLinks                                                                                    bool
 	UploadRequest                                                                               redisstore.UploadRequest
 	Integration                                                                                 redisstore.IntegrationConfig
