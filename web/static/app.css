@@ -1508,18 +1508,27 @@ textarea,
     gap: 0.75rem;
 }
 
+.audit-filter-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .audit-apply-button,
 .audit-reset-button,
 .audit-pagination .secondary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
+    min-width: 10rem;
     min-height: 3.05rem;
     margin-top: 0;
     padding: 0.85rem 1rem;
     border-radius: var(--radius);
     font-weight: 1;
+    line-height: 1;
     text-decoration: none;
+    white-space: nowrap;
 }
 
 .audit-reset-button {
