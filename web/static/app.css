@@ -1721,6 +1721,11 @@ textarea,
     color: #111827;
 }
 
+.terms-content,
+.privacy-card {
+    padding: 1.5rem;
+}
+
 @media (max-width: 900px) {
     .admin-shell {
         grid-template-columns: 1fr;
