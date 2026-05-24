@@ -349,6 +349,8 @@ button:hover,
 .footer-links {
     display: inline-flex;
     gap: 0.85rem;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .footer-links a {
@@ -366,33 +368,26 @@ button:hover,
 }
 
 .legal-card {
+    display: grid;
+    gap: 0.85rem;
     margin-top: 1.5rem;
 }
 
-.legal-content {
-    display: grid;
-    gap: 0.85rem;
-    padding: 1.5rem;
+.legal-card h1,
+.legal-card h2,
+.legal-card p {
+    margin: 0;
 }
 
-.legal-content h2 {
-    margin: 0.75rem 0 0;
+.legal-card h2 {
+    margin-top: 0.75rem;
     color: var(--el-ink);
     font-size: 1.05rem;
 }
 
-.legal-content p {
-    margin: 0;
+.legal-card p {
     color: #39485d;
     line-height: 1.6;
-}
-
-.legal-note {
-    margin-top: 1rem !important;
-    padding: 1rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: #fff7ed;
 }
 
 .secret {
