@@ -36,6 +36,6 @@
 </main>
 <script id="login-form-helper" src="/static/login-form.js" defer></script>
 <script id="login-microsoft-msal-flow" src="/static/login-msal.js" defer></script>
-<footer class="app-footer">{{call .T "footer_copyright"}} {{.Version}}</footer>
+<footer class="app-footer"><span class="footer-copy">{{call .T "footer_copyright"}} {{.Version}}</span><span class="footer-links"><a href="/privacy">{{call .T "privacy_link"}}</a><a href="/terms">{{call .T "terms_link"}}</a></span></footer>
 </body>
 </html>

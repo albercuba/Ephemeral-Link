@@ -334,12 +334,65 @@ button:hover,
 }
 
 .app-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem 1rem;
     width: min(1120px, 100%);
     margin: 2rem auto 1rem;
     padding: 0 1.25rem;
     color: var(--muted);
     font-size: 0.85rem;
     text-align: center;
+}
+
+.footer-links {
+    display: inline-flex;
+    gap: 0.85rem;
+}
+
+.footer-links a {
+    color: var(--muted);
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+}
+
+.footer-links a:hover {
+    color: #ff9f0a;
+}
+
+.legal-page {
+    padding-top: 4vh;
+}
+
+.legal-card {
+    margin-top: 1.5rem;
+}
+
+.legal-content {
+    display: grid;
+    gap: 0.85rem;
+    padding: 1.5rem;
+}
+
+.legal-content h2 {
+    margin: 0.75rem 0 0;
+    color: var(--el-ink);
+    font-size: 1.05rem;
+}
+
+.legal-content p {
+    margin: 0;
+    color: #39485d;
+    line-height: 1.6;
+}
+
+.legal-note {
+    margin-top: 1rem !important;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fff7ed;
 }
 
 .secret {

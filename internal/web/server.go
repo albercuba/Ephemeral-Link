@@ -130,6 +130,8 @@ func (a *App) Routes() http.Handler {
 		}
 		w.WriteHeader(204)
 	})
+	r.Get("/privacy", a.privacy)
+	r.Get("/terms", a.terms)
 	r.Get("/setup", a.setup)
 	r.Post("/setup", a.setupPost)
 	r.Get("/login", a.login)
@@ -177,6 +179,12 @@ func (a *App) home(w http.ResponseWriter, r *http.Request) {
 }
 func (a *App) expired(w http.ResponseWriter, r *http.Request) {
 	a.render(w, r, 410, "expired.html", Page{Title: a.t(r, "gone_title")})
+}
+func (a *App) privacy(w http.ResponseWriter, r *http.Request) {
+	a.render(w, r, 200, "privacy.html", Page{Title: a.t(r, "privacy_title")})
+}
+func (a *App) terms(w http.ResponseWriter, r *http.Request) {
+	a.render(w, r, 200, "terms.html", Page{Title: a.t(r, "terms_title")})
 }
 func (a *App) created(w http.ResponseWriter, r *http.Request) {
 	link := r.URL.Query().Get("link")

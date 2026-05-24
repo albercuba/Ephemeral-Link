@@ -1,0 +1,37 @@
+<!doctype html>
+<html id="terms-html" lang="{{.Lang}}">
+<head id="terms-head">
+  <meta id="terms-meta-charset" charset="utf-8">
+  <meta id="terms-meta-viewport" name="viewport" content="width=device-width,initial-scale=1">
+  <title id="terms-title">{{.Title}}</title>
+  <link rel="icon" href="/brand/favicon">
+  <link id="terms-share-tech-mono-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap">
+  <link id="terms-font-awesome" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link id="terms-stylesheet" rel="stylesheet" href="/static/app.css">
+</head>
+<body id="terms-body">
+<main id="terms-main" class="page narrow legal-page">
+  <a id="terms-brand-link" class="brand el-brand" href="/">{{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call .T "app_name"}}">{{else}}<span id="terms-brand-mark" class="brand-mark">E</span>{{end}}<span class="brand-copy"><strong>{{call .T "app_name"}}</strong></span></a>
+  <article id="terms-card" class="created-card legal-card">
+    <section id="terms-status-panel" class="created-status-panel">
+      <h1 id="terms-heading">{{call .T "terms_title"}}</h1>
+      <p id="terms-updated">{{call .T "legal_last_updated"}}</p>
+    </section>
+    <section id="terms-content" class="legal-content">
+      <h2 id="terms-self-hosted-heading">{{call .T "terms_self_hosted_title"}}</h2>
+      <p id="terms-self-hosted-text">{{call .T "terms_self_hosted_text"}}</p>
+      <h2 id="terms-operator-heading">{{call .T "terms_operator_title"}}</h2>
+      <p id="terms-operator-text">{{call .T "terms_operator_text"}}</p>
+      <h2 id="terms-as-is-heading">{{call .T "terms_as_is_title"}}</h2>
+      <p id="terms-as-is-text">{{call .T "terms_as_is_text"}}</p>
+      <h2 id="terms-liability-heading">{{call .T "terms_liability_title"}}</h2>
+      <p id="terms-liability-text">{{call .T "terms_liability_text"}}</p>
+      <h2 id="terms-security-heading">{{call .T "terms_security_title"}}</h2>
+      <p id="terms-security-text">{{call .T "terms_security_text"}}</p>
+      <p id="terms-disclaimer" class="legal-note">{{call .T "legal_not_legal_advice"}}</p>
+    </section>
+  </article>
+</main>
+<footer class="app-footer"><span class="footer-copy">{{call .T "footer_copyright"}} {{.Version}}</span><span class="footer-links"><a href="/privacy">{{call .T "privacy_link"}}</a><a href="/terms">{{call .T "terms_link"}}</a></span></footer>
+</body>
+</html>
