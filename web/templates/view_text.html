@@ -1,0 +1,32 @@
+<!doctype html>
+<html id="view-text-html" lang="{{.Lang}}">
+<head id="view-text-head">
+  <meta id="view-text-meta-charset" charset="utf-8">
+  <meta id="view-text-meta-viewport" name="viewport" content="width=device-width,initial-scale=1">
+  <title id="view-text-title">{{.Title}}</title>
+  <link rel="icon" href="/brand/favicon">
+  <link id="view-text-share-tech-mono-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap">
+  <link id="view-text-font-awesome" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link id="view-text-stylesheet" rel="stylesheet" href="/static/app.css">
+</head>
+<body id="view-text-body">
+<main id="view-text-main" class="page narrow reveal-warning-page">
+  <article id="view-text-card" class="reveal-warning-card">
+    <h1 id="view-text-heading">{{call .T "click_to_reveal"}}</h1>
+    <p id="view-text-warning">{{call .T "one_time_reveal_warning"}}</p>
+    {{if .Error}}<div id="view-text-error-alert" class="alert">{{.Error}}</div>{{end}}
+    <form id="view-text-reveal-form" method="post" action="/s/{{.ID}}/reveal">
+      <input id="view-text-csrf" type="hidden" name="csrf" value="{{.CSRF}}">
+      {{if .HasPassphrase}}
+      <label id="view-text-password-label" for="view-text-password-input">
+        {{call .T "passphrase_required"}}
+        <input id="view-text-password-input" type="password" name="passphrase" required autofocus>
+      </label>
+      {{end}}
+      <button id="view-text-submit-button" type="submit">{{call .T "click_to_reveal"}}</button>
+    </form>
+  </article>
+</main>
+<footer class="app-footer">{{call .T "footer_copyright"}} {{.Version}}</footer>
+</body>
+</html>

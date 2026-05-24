@@ -1,0 +1,86 @@
+<!doctype html>
+<html id="created-html" lang="{{.Lang}}">
+<head id="created-head">
+  <meta id="created-meta-charset" charset="utf-8">
+  <meta id="created-meta-viewport" name="viewport" content="width=device-width,initial-scale=1">
+  <title id="created-title">{{.Title}}</title>
+  <link rel="icon" href="/brand/favicon">
+  <link id="created-share-tech-mono-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap">
+  <link id="created-font-awesome" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link id="created-stylesheet" rel="stylesheet" href="/static/app.css">
+  <script id="created-script" src="/static/app.js" defer></script>
+</head>
+<body id="created-body" data-created-link="{{.Link}}" data-created-expires="{{.ExpiresAt}}" data-created-ttl="{{.Size}}">
+<main id="created-main" class="page narrow created-page">
+  <nav id="created-nav" class="nav el-nav">
+    <a id="created-brand-link" class="brand el-brand" href="/">
+      <span id="created-brand-mark" class="brand-mark">E</span>
+      <span id="created-brand-copy" class="brand-copy"><strong id="created-brand-name">{{call .T "app_name"}}</strong></span>
+    </a>
+    <div id="created-nav-actions" class="nav-actions">
+      {{if .User}}
+      <span id="created-user-badge" class="user-badge"><span class="user-badge-avatar">{{if .User.FirstName}}{{printf "%.1s" .User.FirstName}}{{else}}{{printf "%.1s" .User.Username}}{{end}}</span><span class="user-badge-copy"><strong>{{if .User.FirstName}}{{.User.FirstName}} {{.User.LastName}}{{else}}{{.User.Username}}{{end}}</strong><small>{{.User.Role}}</small></span></span>
+      {{if eq .User.Role "administrator"}}<a id="created-admin-link" href="/admin">{{call .T "settings"}}</a>{{end}}
+      <form id="created-logout-form" class="logout-form" method="post" action="/logout">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <button id="created-logout-button" type="submit">{{call .T "sign_out"}}</button>
+      </form>
+      {{else}}
+      <a id="created-sign-in-link" href="/login">{{call .T "sign_in"}}</a>
+      {{end}}
+    </div>
+  </nav>
+
+  <a id="created-back-link" class="back-link" href="/">← {{call .T "home_label"}}</a>
+  {{if .Message}}<div id="created-email-status" class="alert">{{.Message}}</div>{{end}}
+
+  <article id="created-card" class="created-card">
+    <section id="created-link-panel" class="created-link-panel">
+      <div id="created-link-key" class="created-key"><i id="created-link-key-icon" class="fa-solid fa-key" aria-hidden="true"></i> {{.ID}}</div>
+      <div id="created-copy-row" class="created-copy-row">
+        <input id="link" readonly value="{{.Link}}">
+        <button id="created-copy-button" type="button" data-copy="#link" aria-label="{{call .T "copy_button"}}"><i class="fa-solid fa-copy" aria-hidden="true"></i></button>
+      </div>
+      <p id="created-warning-text" class="created-security-note">{{call .T "link_security_note"}}</p>
+    </section>
+
+    <section id="created-status-panel" class="created-status-panel">
+      <div id="created-encrypted-pill" class="encrypted-pill">{{call .T "encrypted_label"}}</div>
+      <h1 id="created-heading">{{call .T "created_title"}}</h1>
+      <div id="created-timeline" class="timeline">
+        <div id="created-timeline-created" class="timeline-item">
+          <span id="created-timeline-created-icon" class="timeline-icon good"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
+          <div id="created-timeline-created-copy">
+            <strong id="created-timeline-created-title">{{call .T "created_label"}}</strong>
+            <small id="created-timeline-created-time">{{call .T "just_now"}}</small>
+          </div>
+        </div>
+        <div id="created-timeline-expires" class="timeline-item">
+          <span id="created-timeline-expires-icon" class="timeline-icon warn"><i class="fa-solid fa-stopwatch" aria-hidden="true"></i></span>
+          <div id="created-timeline-expires-copy">
+            <strong id="created-timeline-expires-title">{{call .T "expires_label"}}</strong>
+            <div id="created-expiration-progress" class="expiration-progress"><span id="created-expiration-progress-bar"></span></div>
+            <small id="created-timeline-expires-time">{{if .ExpiresAt}}{{.ExpiresAt}}{{else}}{{call .T "no_expiration_available"}}{{end}}</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="created-actions-panel" class="created-actions-panel">
+      <button id="created-burn-button" class="burn-button" type="button"><i id="created-burn-icon" class="fa-solid fa-fire" aria-hidden="true"></i> {{call .T "burn_this_link"}}</button>
+    </section>
+  </article>
+</main>
+<div id="burn-confirm-overlay" class="modal-overlay" hidden>
+  <section id="burn-confirm-modal" class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="burn-confirm-title">
+    <h2 id="burn-confirm-title">{{call .T "please_confirm"}}</h2>
+    <p id="burn-confirm-message">{{call .T "burn_confirm_message"}}</p>
+    <div id="burn-confirm-actions" class="confirm-actions">
+      <button id="burn-cancel-button" type="button" class="confirm-cancel">{{call .T "cancel_button"}}</button>
+      <button id="burn-confirm-button" type="button" class="confirm-burn">{{call .T "yes_burn_link"}}</button>
+    </div>
+  </section>
+</div>
+<footer class="app-footer">{{call .T "footer_copyright"}} {{.Version}}</footer>
+</body>
+</html>

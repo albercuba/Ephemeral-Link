@@ -1,0 +1,41 @@
+<!doctype html>
+<html id="login-html" lang="{{.Lang}}">
+<head id="login-head">
+  <meta id="login-meta-charset" charset="utf-8">
+  <meta id="login-meta-viewport" name="viewport" content="width=device-width,initial-scale=1">
+  <title id="login-title">{{.Title}}</title>
+  <link rel="icon" href="/brand/favicon">
+  <link id="login-share-tech-mono-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap">
+  <link id="login-font-awesome" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link id="login-stylesheet" rel="stylesheet" href="/static/app.css">
+  <script id="login-msal-script" src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+</head>
+<body id="login-body">
+<main id="login-main" class="page narrow auth-page">
+  <a id="login-brand-link" class="brand el-brand" href="/login">{{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call .T "app_name"}}">{{else}}<span id="login-brand-mark" class="brand-mark">E</span>{{end}}<span id="login-brand-copy" class="brand-copy"><strong>{{call .T "app_name"}}</strong></span></a>
+  <article id="login-card" class="created-card auth-card">
+    <section id="login-status-panel" class="created-status-panel auth-card-panel">
+      <h1 id="login-heading">{{call .T "sign_in"}}</h1>
+      <div id="login-error-alert" class="alert" {{if not .Error}}hidden{{end}}>{{.Error}}</div>
+      <form id="login-form" method="post" action="/login" autocomplete="off" data-clear-on-error="{{if .Error}}true{{else}}false{{end}}">
+        <input id="login-csrf" type="hidden" name="csrf" value="{{.CSRF}}">
+        <label id="login-username-label" for="login-username-input">{{call .T "username_label"}}
+          <input id="login-username-input" type="text" name="username" autocomplete="off" autocapitalize="none" spellcheck="false" required autofocus>
+        </label>
+        <label id="login-password-label" for="login-password-input">{{call .T "password_label"}}
+          <input id="login-password-input" type="password" name="password" autocomplete="new-password" required>
+        </label>
+        <button id="login-submit-button" type="submit">{{call .T "sign_in"}}</button>
+      </form>
+    </section>
+    <section id="login-actions-panel" class="created-actions-panel auth-provider-actions">
+      <a id="login-microsoft-button" class="auth-provider-button" href="/auth/microsoft"><i class="fa-brands fa-microsoft" aria-hidden="true"></i> {{call .T "sign_in_microsoft"}}</a>
+      <a id="login-ad-button" class="auth-provider-button" href="/auth/ad"><i class="fa-solid fa-server" aria-hidden="true"></i> {{call .T "sign_in_local_ad"}}</a>
+    </section>
+  </article>
+</main>
+<script id="login-form-helper" src="/static/login-form.js" defer></script>
+<script id="login-microsoft-msal-flow" src="/static/login-msal.js" defer></script>
+<footer class="app-footer">{{call .T "footer_copyright"}} {{.Version}}</footer>
+</body>
+</html>

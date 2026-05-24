@@ -1,0 +1,6 @@
+.env
+data/
+*.tmp
+.DS_Store
+/ephemeral-link
+coverage.out

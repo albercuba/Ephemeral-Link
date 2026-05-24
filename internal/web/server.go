@@ -1,0 +1,820 @@
+package web
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"html/template"
+	"io"
+	"log/slog"
+	"mime"
+	"net/http"
+	"net/mail"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
+	"ephemeral-link/internal/config"
+	sec "ephemeral-link/internal/crypto"
+	"ephemeral-link/internal/i18n"
+	"ephemeral-link/internal/ratelimit"
+	"ephemeral-link/internal/redisstore"
+	"ephemeral-link/internal/storage"
+)
+
+type App struct {
+	cfg       config.Config
+	store     *redisstore.Store
+	files     *storage.Local
+	i18n      *i18n.Bundle
+	log       *slog.Logger
+	templates *template.Template
+}
+
+const appVersion = "v1.0.0"
+
+type Page struct {
+	Title, Lang, CSRF, Error, Link, ID, Kind, Secret, Filename, Mime, Message, LogoURL, Version string
+	Size                                                                                        int64
+	ExpiresAt                                                                                   string
+	HasPassphrase                                                                               bool
+	User                                                                                        *redisstore.User
+	Users                                                                                       []redisstore.User
+	Items                                                                                       []redisstore.Item
+	UploadRequests                                                                              []redisstore.UploadRequest
+	AuditEvents                                                                                 []redisstore.AuditEvent
+	HasLinks                                                                                    bool
+	UploadRequest                                                                               redisstore.UploadRequest
+	Integration                                                                                 redisstore.IntegrationConfig
+	Disk                                                                                        DiskInfo
+	Analytics                                                                                   AdminAnalytics
+	T                                                                                           func(string) string
+	Languages                                                                                   []string
+	TTLs                                                                                        []ttlOpt
+}
+type ttlOpt struct {
+	Label   string
+	Seconds int64
+}
+type DiskInfo struct{ Total, Available, Used, UsedPercent string }
+
+type AdminAnalytics struct {
+	ActiveTextLinks       int
+	ActiveFileLinks       int
+	ActiveUploadRequests  int
+	ReceivedFilesReady    int
+	RecentLinksCreated    int
+	RecentLinksConsumed   int
+	RecentUploadRequests  int
+	RecentEmailDeliveries int
+	RecentEmailFailures   int
+	RecentBurns           int
+	RecentFailedAccesses  int
+	RecentAuditEvents     int
+	StorageBytesActive    int64
+}
+
+func New(cfg config.Config, store *redisstore.Store, files *storage.Local, bundle *i18n.Bundle, log *slog.Logger) (*App, error) {
+	t := template.New("").Funcs(template.FuncMap{
+		"humanSize":   humanSize,
+		"formatBytes": humanSize,
+		"formatTime":  formatTime,
+		"t": func(key string, page Page) string {
+			if page.T == nil {
+				return key
+			}
+			return page.T(key)
+		},
+	})
+	t, err := t.ParseGlob("web/templates/*.html")
+	if err != nil {
+		return nil, err
+	}
+	return &App{cfg: cfg, store: store, files: files, i18n: bundle, log: log, templates: t}, nil
+}
+
+func (a *App) Routes() http.Handler {
+	r := chi.NewRouter()
+	r.Use(middleware.RealIP, middleware.RequestID, middleware.Recoverer, a.securityHeaders, ratelimit.New(a.cfg.RateLimitPerMinute).Middleware, a.csrfMiddleware)
+	r.Get("/static/*", func(w http.ResponseWriter, r *http.Request) {
+		http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))).ServeHTTP(w, r)
+	})
+	r.Get("/brand/logo", a.logo)
+	r.Get("/brand/favicon", a.favicon)
+	r.Get("/favicon.ico", a.favicon)
+	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) })
+	r.Get("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if err := a.store.Ping(r.Context()); err != nil {
+			http.Error(w, "not ready", 503)
+			return
+		}
+		w.WriteHeader(204)
+	})
+	r.Get("/setup", a.setup)
+	r.Post("/setup", a.setupPost)
+	r.Get("/login", a.login)
+	r.Post("/login", a.loginPost)
+	r.Post("/logout", a.logout)
+	r.Get("/auth/microsoft/config", a.microsoftConfig)
+	r.Post("/auth/microsoft", a.microsoftPost)
+	r.Get("/auth/microsoft", a.microsoftLogin)
+	r.Get("/auth/microsoft/callback", a.microsoftCallback)
+	r.Get("/auth/ad", a.adLogin)
+	r.Group(func(r chi.Router) {
+		r.Use(a.requireAuth)
+		r.Get("/", a.home)
+		r.Post("/language", a.language)
+		r.Post("/create", a.create)
+		r.Post("/secrets/text", a.createText)
+		r.Post("/secrets/file", a.createFile)
+		r.Post("/upload-requests", a.createUploadRequest)
+		r.Get("/upload-requests/{id}/status", a.uploadRequestStatus)
+		r.Get("/upload-requests/{id}/download", a.downloadUploadRequestFile)
+		r.Get("/created", a.created)
+		r.Get("/admin", a.admin)
+		r.Post("/admin/links/{id}/burn", a.adminBurnLink)
+		r.Post("/admin/upload-requests/{id}/burn", a.adminBurnUploadRequest)
+		r.Post("/admin/users", a.adminSaveUser)
+		r.Post("/admin/users/{username}/delete", a.adminDeleteUser)
+		r.Post("/admin/integrations", a.adminSaveIntegrations)
+		r.Post("/admin/logo", a.adminUploadLogo)
+	})
+	r.Get("/s/{id}", a.viewText)
+	r.Post("/s/{id}/reveal", a.revealText)
+	r.Get("/f/{id}", a.viewFile)
+	r.Post("/f/{id}/download", a.downloadFile)
+	r.Get("/upload/{id}", a.viewUploadRequest)
+	r.Post("/upload/{id}", a.submitUploadRequest)
+	r.Get("/expired", a.expired)
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		a.render(w, r, 404, "error.html", Page{Title: "404", Error: a.t(r, "not_found")})
+	})
+	return r
+}
+
+func (a *App) home(w http.ResponseWriter, r *http.Request) {
+	a.render(w, r, 200, "home.html", Page{Title: a.t(r, "app_name")})
+}
+func (a *App) expired(w http.ResponseWriter, r *http.Request) {
+	a.render(w, r, 410, "expired.html", Page{Title: a.t(r, "gone_title")})
+}
+func (a *App) created(w http.ResponseWriter, r *http.Request) {
+	link := r.URL.Query().Get("link")
+	ttl, _ := strconv.ParseInt(r.URL.Query().Get("ttl"), 10, 64)
+	expiresAt := r.URL.Query().Get("expires")
+	message := ""
+	switch r.URL.Query().Get("email") {
+	case "sent":
+		message = a.t(r, "created_email_sent")
+	case "failed":
+		message = a.t(r, "created_email_failed")
+	}
+	a.render(w, r, 200, "created.html", Page{Title: a.t(r, "created_title"), Link: link, ID: displayCodeFromLink(link), ExpiresAt: expiresAt, Size: ttl, Message: message})
+}
+func (a *App) language(w http.ResponseWriter, r *http.Request) {
+	lang := a.i18n.Normalize(r.FormValue("language"))
+	http.SetCookie(w, &http.Cookie{Name: "lang", Value: lang, Path: "/", MaxAge: 31536000, HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: a.cfg.SecureCookies})
+	http.Redirect(w, r, referer(r), 303)
+}
+
+func (a *App) create(w http.ResponseWriter, r *http.Request) {
+	if r.FormValue("secret_type") == "file" {
+		a.createFile(w, r)
+		return
+	}
+	a.createText(w, r)
+}
+
+func (a *App) createText(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	secret := r.FormValue("secret")
+	if secret == "" || int64(len(secret)) > a.cfg.MaxTextSecretSize {
+		a.formError(w, r, "invalid_text_secret")
+		return
+	}
+	item, err := a.newBaseItem(r, "text")
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	dataKey, _ := sec.NewDataKey()
+	wrapped, err := sec.WrapKey(dataKey, a.cfg.EncryptionMasterKey)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	payload, err := sec.Encrypt([]byte(secret), dataKey)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	item.WrappedKeyNonce, item.WrappedKeyCiphertext = wrapped.Nonce, wrapped.Ciphertext
+	item.PayloadNonce, item.PayloadCiphertext = payload.Nonce, payload.Ciphertext
+	if err := a.store.Create(r.Context(), item, time.Until(time.Unix(item.ExpiresAt, 0))); err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	link := strings.TrimRight(a.cfg.AppBaseURL, "/") + "/s/" + item.ID
+	emailStatus, ok := a.sendCreatedLinkIfRequested(w, r, item, link, "text")
+	if !ok {
+		return
+	}
+	a.audit(r, "create_text_link", item.ID, "success", "")
+	a.redirectCreated(w, r, "/s/"+item.ID, item, emailStatus)
+}
+
+func (a *App) createFile(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, a.cfg.MaxFileSize+1024*1024)
+	if err := r.ParseMultipartForm(a.cfg.MaxFileSize); err != nil {
+		a.formError(w, r, "invalid_file")
+		return
+	}
+	fh, header, err := r.FormFile("file")
+	if err != nil {
+		a.formError(w, r, "invalid_file")
+		return
+	}
+	defer fh.Close()
+	limited := io.LimitReader(fh, a.cfg.MaxFileSize+1)
+	plaintext, err := io.ReadAll(limited)
+	if err != nil || int64(len(plaintext)) > a.cfg.MaxFileSize || len(plaintext) == 0 {
+		a.formError(w, r, "invalid_file")
+		return
+	}
+	if !diskCanAccept(a.cfg.StoragePath, int64(len(plaintext))*2) {
+		a.formError(w, r, "disk_space_limit")
+		return
+	}
+	item, err := a.newBaseItem(r, "file")
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	dataKey, _ := sec.NewDataKey()
+	wrapped, err := sec.WrapKey(dataKey, a.cfg.EncryptionMasterKey)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	payload, err := sec.Encrypt(plaintext, dataKey)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	p, err := a.files.Write(item.ID, []byte(payload.Ciphertext))
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	name := storage.SanitizeFilename(header.Filename)
+	item.WrappedKeyNonce, item.WrappedKeyCiphertext = wrapped.Nonce, wrapped.Ciphertext
+	item.PayloadNonce = payload.Nonce
+	item.OriginalFilename = header.Filename
+	item.SanitizedFilename = name
+	item.FileSize = int64(len(plaintext))
+	item.MimeType = http.DetectContentType(plaintext[:min(len(plaintext), 512)])
+	item.StorageObjectPath = p
+	if err := a.store.Create(r.Context(), item, time.Until(time.Unix(item.ExpiresAt, 0))); err != nil {
+		a.files.Delete(p)
+		a.bad(w, r, err)
+		return
+	}
+	link := strings.TrimRight(a.cfg.AppBaseURL, "/") + "/f/" + item.ID
+	emailStatus, ok := a.sendCreatedLinkIfRequested(w, r, item, link, "file")
+	if !ok {
+		return
+	}
+	a.audit(r, "create_file_link", item.ID, "success", fmt.Sprintf("size=%d", item.FileSize))
+	a.redirectCreated(w, r, "/f/"+item.ID, item, emailStatus)
+}
+
+func (a *App) createUploadRequest(w http.ResponseWriter, r *http.Request) {
+	user, ok := currentUser(r)
+	if !ok {
+		http.Redirect(w, r, "/login", 303)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	delivery := r.FormValue("delivery")
+	if delivery == "" {
+		delivery = "email"
+	}
+	recipient := strings.TrimSpace(r.FormValue("recipient_email"))
+	if delivery == "email" {
+		if _, err := mail.ParseAddress(recipient); err != nil {
+			a.formError(w, r, "invalid_email")
+			return
+		}
+	}
+	requesterEmail := strings.TrimSpace(user.Email)
+	if requesterEmail == "" {
+		requesterEmail = strings.TrimSpace(r.FormValue("requester_email"))
+	}
+	if requesterEmail != "" {
+		if _, err := mail.ParseAddress(requesterEmail); err != nil {
+			a.formError(w, r, "requester_email_required")
+			return
+		}
+	}
+	id, err := sec.Token()
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	now := time.Now()
+	ttl := a.ttl(r)
+	req := redisstore.UploadRequest{ID: id, Status: "available", CreatedAt: now.Unix(), ExpiresAt: now.Add(ttl).Unix(), RequestedBy: user.Username, RequesterEmail: requesterEmail, RecipientEmail: recipient, Message: strings.TrimSpace(r.FormValue("message"))}
+	if err := a.store.CreateUploadRequest(r.Context(), req, ttl); err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	link := strings.TrimRight(a.cfg.AppBaseURL, "/") + "/upload/" + id
+	if delivery == "email" {
+		if err := a.sendUploadRequestEmail(r.Context(), recipient, link, displayUser(user), req.Message); err != nil {
+			a.bad(w, r, err)
+			return
+		}
+	}
+	a.audit(r, "create_upload_request", id, "success", "delivery="+delivery)
+	a.redirectCreated(w, r, "/upload/"+id, redisstore.Item{ID: id, CreatedAt: req.CreatedAt, ExpiresAt: req.ExpiresAt}, "")
+}
+
+func (a *App) viewUploadRequest(w http.ResponseWriter, r *http.Request) {
+	req, err := a.availableUploadRequest(r)
+	if err != nil {
+		http.Redirect(w, r, "/expired", 303)
+		return
+	}
+	a.render(w, r, 200, "upload_request.html", Page{Title: a.t(r, "upload_request_title"), UploadRequest: req, ExpiresAt: formatTime(req.ExpiresAt)})
+}
+
+func (a *App) uploadRequestStatus(w http.ResponseWriter, r *http.Request) {
+	user, ok := currentUser(r)
+	if !ok {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	req, err := a.store.GetUploadRequest(r.Context(), chi.URLParam(r, "id"))
+	if err != nil || req.RequestedBy != user.Username {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	uploaded := false
+	downloadURL := ""
+	if req.UploadedItemID != "" {
+		if item, err := a.store.Get(r.Context(), req.UploadedItemID); err == nil && item.Status == "available" && time.Now().Unix() <= item.ExpiresAt {
+			uploaded = true
+			downloadURL = "/upload-requests/" + req.ID + "/download"
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"uploaded": uploaded, "download_url": downloadURL})
+}
+
+func (a *App) downloadUploadRequestFile(w http.ResponseWriter, r *http.Request) {
+	user, ok := currentUser(r)
+	if !ok {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	req, err := a.store.GetUploadRequest(r.Context(), chi.URLParam(r, "id"))
+	if err != nil || req.RequestedBy != user.Username || req.UploadedItemID == "" {
+		http.Redirect(w, r, "/expired", 303)
+		return
+	}
+	item, err := a.store.Get(r.Context(), req.UploadedItemID)
+	if err != nil || item.Type != "file" || item.Status != "available" {
+		http.Redirect(w, r, "/expired", 303)
+		return
+	}
+	claimed, err := a.store.Claim(r.Context(), item.ID)
+	if err != nil {
+		http.Redirect(w, r, "/expired", 303)
+		return
+	}
+	a.audit(r, "download_uploaded_file", item.ID, "success", "upload_request="+req.ID)
+	a.serveClaimedFile(w, r, claimed)
+}
+
+func (a *App) submitUploadRequest(w http.ResponseWriter, r *http.Request) {
+	req, err := a.availableUploadRequest(r)
+	if err != nil {
+		http.Redirect(w, r, "/expired", 303)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, a.cfg.MaxFileSize+1024*1024)
+	if err := r.ParseMultipartForm(a.cfg.MaxFileSize); err != nil {
+		a.render(w, r, 400, "upload_request.html", Page{Title: a.t(r, "upload_request_title"), UploadRequest: req, Error: a.t(r, "invalid_file")})
+		return
+	}
+	fh, header, err := r.FormFile("file")
+	if err != nil {
+		a.render(w, r, 400, "upload_request.html", Page{Title: a.t(r, "upload_request_title"), UploadRequest: req, Error: a.t(r, "invalid_file")})
+		return
+	}
+	defer fh.Close()
+	plaintext, err := io.ReadAll(io.LimitReader(fh, a.cfg.MaxFileSize+1))
+	if err != nil || int64(len(plaintext)) > a.cfg.MaxFileSize || len(plaintext) == 0 {
+		a.render(w, r, 400, "upload_request.html", Page{Title: a.t(r, "upload_request_title"), UploadRequest: req, Error: a.t(r, "invalid_file")})
+		return
+	}
+	if !diskCanAccept(a.cfg.StoragePath, int64(len(plaintext))*2) {
+		a.render(w, r, 507, "upload_request.html", Page{Title: a.t(r, "upload_request_title"), UploadRequest: req, Error: a.t(r, "disk_space_limit")})
+		return
+	}
+	req, err = a.store.ClaimUploadRequest(r.Context(), req.ID)
+	if err != nil {
+		http.Redirect(w, r, "/expired", 303)
+		return
+	}
+	item, err := a.newUploadedFileItem(r, req, header.Filename, plaintext)
+	if err != nil {
+		_ = a.store.ReleaseUploadRequest(r.Context(), req.ID)
+		a.bad(w, r, err)
+		return
+	}
+	if err := a.store.MarkUploadRequestUploaded(r.Context(), req.ID, item.ID); err != nil {
+		_ = a.store.ReleaseUploadRequest(r.Context(), req.ID)
+		_ = a.store.BurnItem(r.Context(), item.ID)
+		a.files.Delete(item.StorageObjectPath)
+		a.bad(w, r, err)
+		return
+	}
+	if r.FormValue("notify_requester") == "on" && req.RequesterEmail != "" {
+		link := strings.TrimRight(a.cfg.AppBaseURL, "/") + "/f/" + item.ID
+		if err := a.sendUploadNotificationEmail(r.Context(), req.RequesterEmail, link); err != nil {
+			a.log.Warn("upload notification failed", "error", err)
+		}
+	}
+	a.audit(r, "submit_upload_request", req.ID, "success", fmt.Sprintf("item=%s size=%d", item.ID, item.FileSize))
+	a.render(w, r, 200, "upload_request_done.html", Page{Title: a.t(r, "upload_complete_title")})
+}
+
+func (a *App) viewText(w http.ResponseWriter, r *http.Request) {
+	item, err := a.getAvailable(r)
+	if err != nil || item.Type != "text" {
+		http.Redirect(w, r, "/expired", 303)
+		return
+	}
+	a.render(w, r, 200, "view_text.html", Page{Title: a.t(r, "view_secret_title"), ID: item.ID, HasPassphrase: item.HasPassphrase, ExpiresAt: formatTime(item.ExpiresAt)})
+}
+func (a *App) revealText(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	item, err := a.store.Get(r.Context(), id)
+	if err != nil || item.Type != "text" || item.Status != "available" {
+		http.Redirect(w, r, "/expired", 303)
+		return
+	}
+	if !sec.VerifyPassphrase(item.PassphraseHash, r.FormValue("passphrase")) {
+		a.render(w, r, 403, "view_text.html", Page{Title: a.t(r, "view_secret_title"), ID: id, HasPassphrase: item.HasPassphrase, Error: a.t(r, "bad_passphrase")})
+		return
+	}
+	claimed, err := a.store.Claim(r.Context(), id)
+	if err != nil {
+		http.Redirect(w, r, "/expired", 303)
+		return
+	}
+	a.audit(r, "reveal_text_link", id, "success", "")
+	key, err := sec.UnwrapKey(sec.WrappedKey{Nonce: claimed.WrappedKeyNonce, Ciphertext: claimed.WrappedKeyCiphertext}, a.cfg.EncryptionMasterKey)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	plain, err := sec.Decrypt(sec.EncryptedPayload{Nonce: claimed.PayloadNonce, Ciphertext: claimed.PayloadCiphertext}, key)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	a.render(w, r, 200, "secret_revealed.html", Page{Title: a.t(r, "revealed_title"), Secret: string(plain)})
+}
+func (a *App) viewFile(w http.ResponseWriter, r *http.Request) {
+	item, err := a.getAvailable(r)
+	if err != nil || item.Type != "file" {
+		http.Redirect(w, r, "/expired", 303)
+		return
+	}
+	a.render(w, r, 200, "view_file.html", Page{Title: a.t(r, "download_title"), ID: item.ID, Filename: item.SanitizedFilename, Size: item.FileSize, Mime: item.MimeType, HasPassphrase: item.HasPassphrase, ExpiresAt: formatTime(item.ExpiresAt)})
+}
+func (a *App) downloadFile(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	item, err := a.store.Get(r.Context(), id)
+	if err != nil || item.Type != "file" || item.Status != "available" {
+		http.Redirect(w, r, "/expired", 303)
+		return
+	}
+	if !sec.VerifyPassphrase(item.PassphraseHash, r.FormValue("passphrase")) {
+		a.render(w, r, 403, "view_file.html", Page{Title: a.t(r, "download_title"), ID: id, Filename: item.SanitizedFilename, Size: item.FileSize, Mime: item.MimeType, HasPassphrase: item.HasPassphrase, Error: a.t(r, "bad_passphrase")})
+		return
+	}
+	claimed, err := a.store.Claim(r.Context(), id)
+	if err != nil {
+		http.Redirect(w, r, "/expired", 303)
+		return
+	}
+	a.audit(r, "download_file_link", id, "success", fmt.Sprintf("size=%d", item.FileSize))
+	a.serveClaimedFile(w, r, claimed)
+}
+
+func (a *App) serveClaimedFile(w http.ResponseWriter, r *http.Request, claimed redisstore.Item) {
+	defer a.files.Delete(claimed.StorageObjectPath)
+	enc, err := a.files.Read(claimed.StorageObjectPath)
+	if err != nil {
+		http.Redirect(w, r, "/expired", 303)
+		return
+	}
+	key, err := sec.UnwrapKey(sec.WrappedKey{Nonce: claimed.WrappedKeyNonce, Ciphertext: claimed.WrappedKeyCiphertext}, a.cfg.EncryptionMasterKey)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	plain, err := sec.Decrypt(sec.EncryptedPayload{Nonce: claimed.PayloadNonce, Ciphertext: string(enc)}, key)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	w.Header().Set("Content-Type", safeMime(claimed.MimeType))
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": claimed.SanitizedFilename}))
+	w.Header().Set("Content-Length", strconv.Itoa(len(plain)))
+	_, _ = w.Write(plain)
+}
+
+func (a *App) newUploadedFileItem(r *http.Request, req redisstore.UploadRequest, filename string, plaintext []byte) (redisstore.Item, error) {
+	item, err := a.newBaseItem(r, "file")
+	if err != nil {
+		return redisstore.Item{}, err
+	}
+	item.CreatedBy = req.RequestedBy
+	item.Direction = "receive"
+	dataKey, _ := sec.NewDataKey()
+	wrapped, err := sec.WrapKey(dataKey, a.cfg.EncryptionMasterKey)
+	if err != nil {
+		return redisstore.Item{}, err
+	}
+	payload, err := sec.Encrypt(plaintext, dataKey)
+	if err != nil {
+		return redisstore.Item{}, err
+	}
+	p, err := a.files.Write(item.ID, []byte(payload.Ciphertext))
+	if err != nil {
+		return redisstore.Item{}, err
+	}
+	item.WrappedKeyNonce, item.WrappedKeyCiphertext = wrapped.Nonce, wrapped.Ciphertext
+	item.PayloadNonce = payload.Nonce
+	item.OriginalFilename = filename
+	item.SanitizedFilename = storage.SanitizeFilename(filename)
+	item.FileSize = int64(len(plaintext))
+	item.MimeType = http.DetectContentType(plaintext[:min(len(plaintext), 512)])
+	item.StorageObjectPath = p
+	if err := a.store.Create(r.Context(), item, time.Until(time.Unix(item.ExpiresAt, 0))); err != nil {
+		a.files.Delete(p)
+		return redisstore.Item{}, err
+	}
+	return item, nil
+}
+func (a *App) newBaseItem(r *http.Request, typ string) (redisstore.Item, error) {
+	id, err := sec.Token()
+	if err != nil {
+		return redisstore.Item{}, err
+	}
+	ttl := a.ttl(r)
+	now := time.Now()
+	ph, err := sec.HashPassphrase(r.FormValue("passphrase"))
+	if err != nil {
+		return redisstore.Item{}, err
+	}
+	createdBy := "anonymous"
+	if user, ok := currentUser(r); ok {
+		createdBy = user.Username
+	}
+	return redisstore.Item{ID: id, Type: typ, Status: "available", CreatedAt: now.Unix(), ExpiresAt: now.Add(ttl).Unix(), CreatedBy: createdBy, Direction: "send", HasPassphrase: ph != "", PassphraseHash: ph}, nil
+}
+func (a *App) ttl(r *http.Request) time.Duration {
+	raw := r.FormValue("ttl")
+	if raw == "" {
+		raw = r.FormValue("ttl_seconds")
+	}
+	n, _ := strconv.ParseInt(raw, 10, 64)
+	d := time.Duration(n) * time.Second
+	if d <= 0 {
+		d = a.cfg.DefaultTTL
+	}
+	if d > a.cfg.MaxTTL {
+		d = a.cfg.MaxTTL
+	}
+	return d
+}
+func (a *App) getAvailable(r *http.Request) (redisstore.Item, error) {
+	item, err := a.store.Get(r.Context(), chi.URLParam(r, "id"))
+	if err != nil || item.Status != "available" || time.Now().Unix() > item.ExpiresAt {
+		return item, redisstore.ErrGone
+	}
+	return item, nil
+}
+func (a *App) availableUploadRequest(r *http.Request) (redisstore.UploadRequest, error) {
+	req, err := a.store.GetUploadRequest(r.Context(), chi.URLParam(r, "id"))
+	if err != nil || req.Status != "available" || time.Now().Unix() > req.ExpiresAt {
+		return req, redisstore.ErrGone
+	}
+	return req, nil
+}
+func (a *App) sendCreatedLinkIfRequested(w http.ResponseWriter, r *http.Request, item redisstore.Item, link, kind string) (string, bool) {
+	recipient := strings.TrimSpace(r.FormValue("recipient_email"))
+	if recipient == "" {
+		return "", true
+	}
+	if _, err := mail.ParseAddress(recipient); err != nil {
+		a.formError(w, r, "invalid_email")
+		return "", false
+	}
+	creator := item.CreatedBy
+	if user, ok := currentUser(r); ok {
+		creator = displayUser(user)
+	}
+	if err := a.sendCreatedLinkEmail(r.Context(), recipient, link, creator, kind); err != nil {
+		a.audit(r, "send_created_link_email", item.ID, "failure", kind)
+		a.log.Warn("created link email failed", "error", err, "item", item.ID, "kind", kind)
+		return "failed", true
+	}
+	a.audit(r, "send_created_link_email", item.ID, "success", kind)
+	return "sent", true
+}
+
+func (a *App) redirectCreated(w http.ResponseWriter, r *http.Request, path string, item redisstore.Item, emailStatus string) {
+	link := strings.TrimRight(a.cfg.AppBaseURL, "/") + path
+	ttl := item.ExpiresAt - item.CreatedAt
+	expires := time.Unix(item.ExpiresAt, 0).Format(time.RFC1123)
+	target := "/created?link=" + template.URLQueryEscaper(link) + "&expires=" + template.URLQueryEscaper(expires) + "&ttl=" + strconv.FormatInt(ttl, 10)
+	if emailStatus != "" {
+		target += "&email=" + template.URLQueryEscaper(emailStatus)
+	}
+	http.Redirect(w, r, target, 303)
+}
+func (a *App) render(w http.ResponseWriter, r *http.Request, status int, name string, p Page) {
+	lang := a.lang(r)
+	p.Lang = lang
+	p.CSRF = a.csrf(w, r)
+	if p.User == nil {
+		if user, ok := currentUser(r); ok {
+			p.User = user
+		}
+	}
+	p.T = func(k string) string { return a.i18n.T(lang, k) }
+	p.Version = appVersion
+	p.Languages = a.cfg.AllowedLanguages
+	p.TTLs = []ttlOpt{{"1 minute", 60}, {"5 minutes", 300}, {"30 minutes", 1800}, {"1 hour", 3600}, {"4 hours", 14400}, {"12 hours", 43200}, {"1 day", 86400}, {"3 days", 259200}, {"7 days", 604800}, {"14 days", 1209600}, {"30 days", 2592000}}
+	if _, err := os.Stat(a.logoPath()); err == nil {
+		p.LogoURL = "/brand/logo"
+	}
+	w.WriteHeader(status)
+	if err := a.templates.ExecuteTemplate(w, name, p); err != nil {
+		a.log.Error("render failed", "error", err)
+	}
+}
+func (a *App) lang(r *http.Request) string {
+	if c, err := r.Cookie("lang"); err == nil {
+		return a.i18n.Normalize(c.Value)
+	}
+	return a.cfg.DefaultLanguage
+}
+func (a *App) t(r *http.Request, k string) string { return a.i18n.T(a.lang(r), k) }
+func (a *App) bad(w http.ResponseWriter, r *http.Request, err error) {
+	a.log.Error("request failed", "error", err)
+	a.render(w, r, 500, "error.html", Page{Title: "500", Error: a.t(r, "server_error")})
+}
+func (a *App) formError(w http.ResponseWriter, r *http.Request, key string) {
+	a.render(w, r, 400, "home.html", Page{Title: a.t(r, "app_name"), Error: a.t(r, key)})
+}
+func displayUser(user *redisstore.User) string {
+	if user.FirstName != "" || user.LastName != "" {
+		return strings.TrimSpace(user.FirstName + " " + user.LastName)
+	}
+	return user.Username
+}
+func (a *App) logoPath() string                            { return filepath.Join(a.cfg.StoragePath, "brand-logo") }
+func (a *App) logo(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, a.logoPath()) }
+func (a *App) favicon(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-cache")
+	if _, err := os.Stat(a.logoPath()); err == nil {
+		http.ServeFile(w, r, a.logoPath())
+		return
+	}
+	w.Header().Set("Content-Type", "image/svg+xml")
+	_, _ = w.Write([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#f97316"/><text x="16" y="23" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="900" fill="#ffffff">E</text></svg>`))
+}
+
+func (a *App) securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://alcdn.msauth.net https://cdn.jsdelivr.net; connect-src 'self' https://login.microsoftonline.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'none'")
+		next.ServeHTTP(w, r)
+	})
+}
+func (a *App) csrfMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			r.Body = http.MaxBytesReader(w, r.Body, a.cfg.MaxFileSize+1024*1024)
+			if r.FormValue("csrf") == "" || r.FormValue("csrf") != csrfCookie(r) {
+				http.Error(w, "invalid csrf token", 403)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+func (a *App) csrf(w http.ResponseWriter, r *http.Request) string {
+	if v := csrfCookie(r); v != "" {
+		return v
+	}
+	b := make([]byte, 24)
+	_, _ = rand.Read(b)
+	v := base64.RawURLEncoding.EncodeToString(b)
+	http.SetCookie(w, &http.Cookie{Name: "csrf", Value: v, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: a.cfg.SecureCookies})
+	return v
+}
+func csrfCookie(r *http.Request) string {
+	c, err := r.Cookie("csrf")
+	if err != nil {
+		return ""
+	}
+	return c.Value
+}
+
+func (a *App) audit(r *http.Request, event, target, result, details string) {
+	actor := "anonymous"
+	if user, ok := currentUser(r); ok && user.Username != "" {
+		actor = user.Username
+	}
+	a.auditAs(r, actor, event, target, result, details)
+}
+
+func (a *App) auditAs(r *http.Request, actor, event, target, result, details string) {
+	if actor == "" {
+		actor = "anonymous"
+	}
+	if len(details) > 240 {
+		details = details[:240]
+	}
+	if err := a.store.AddAuditEvent(r.Context(), redisstore.AuditEvent{Actor: actor, IP: r.RemoteAddr, Event: event, Target: target, Result: result, Details: details}); err != nil {
+		a.log.Warn("audit event write failed", "error", err, "event", event)
+	}
+}
+func referer(r *http.Request) string {
+	if v := r.Header.Get("Referer"); v != "" {
+		return v
+	}
+	return "/"
+}
+func formatTime(ts int64) string { return time.Unix(ts, 0).Format(time.RFC1123) }
+func humanSize(n int64) string {
+	if n < 1024 {
+		return fmt.Sprintf("%d B", n)
+	}
+	if n < 1024*1024 {
+		return fmt.Sprintf("%.1f KB", float64(n)/1024)
+	}
+	return fmt.Sprintf("%.1f MB", float64(n)/(1024*1024))
+}
+func safeMime(v string) string {
+	if v == "" {
+		return "application/octet-stream"
+	}
+	return v
+}
+func displayCodeFromLink(link string) string {
+	parts := strings.Split(strings.TrimRight(link, "/"), "/")
+	if len(parts) == 0 {
+		return "LINK"
+	}
+	tail := parts[len(parts)-1]
+	if len(tail) > 4 {
+		tail = tail[:4]
+	}
+	return strings.ToUpper(tail)
+}
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+var _ = context.Background
+var _ = errors.New
+var _ = filepath.Base

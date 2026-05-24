@@ -1,0 +1,42 @@
+<!doctype html>
+<html id="upload-done-html" lang="{{.Lang}}">
+    <head id="upload-done-head">
+        <meta id="upload-done-meta-charset" charset="utf-8" />
+        <meta
+            id="upload-done-meta-viewport"
+            name="viewport"
+            content="width=device-width,initial-scale=1"
+        />
+        <title id="upload-done-title">{{.Title}}</title>
+  <link rel="icon" href="/brand/favicon">
+        <link
+            id="upload-done-share-tech-mono-font"
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap"
+        />
+        <link
+            id="upload-done-font-awesome"
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        />
+        <link
+            id="upload-done-stylesheet"
+            rel="stylesheet"
+            href="/static/app.css"
+        />
+    </head>
+    <body id="upload-done-body">
+        <main id="upload-done-main" class="page narrow reveal-warning-page">
+            <article id="upload-done-card" class="reveal-warning-card">
+                <h1 id="upload-done-heading">
+                    <i class="fa-solid fa-check" aria-hidden="true"></i> {{call
+                    .T "upload_complete_title"}}
+                </h1>
+                <p id="upload-done-message">
+                    {{call .T "upload_complete_text"}}
+                </p>
+            </article>
+        </main>
+    <footer class="app-footer">{{call .T "footer_copyright"}} {{.Version}}</footer>
+</body>
+</html>

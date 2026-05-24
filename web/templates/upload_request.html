@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{.Title}}</title>
+  <link rel="icon" href="/brand/favicon">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+<main class="page narrow upload-request-page">
+  <nav class="nav el-nav">
+    <a class="brand el-brand" href="/">{{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call .T "app_name"}}">{{else}}<span class="brand-mark">E</span>{{end}}<span class="brand-copy"><strong>{{call .T "app_name"}}</strong></span></a>
+  </nav>
+  <section class="card created-card">
+    <h1>{{call .T "upload_request_title"}}</h1>
+    <p>{{call .T "upload_request_intro"}}</p>
+    {{if .UploadRequest.Message}}<blockquote class="warning-card">{{.UploadRequest.Message}}</blockquote>{{end}}
+    <p><small>{{call .T "expires_label"}}: {{.ExpiresAt}}</small></p>
+    {{if .Error}}<div class="alert">{{.Error}}</div>{{end}}
+    <form method="post" action="/upload/{{.UploadRequest.ID}}" enctype="multipart/form-data">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <label class="full-field" for="file-input">
+        {{call .T "file_label"}}
+        <span class="file-control">
+          <span class="file-button"><i class="fa-solid fa-file" aria-hidden="true"></i> {{call .T "choose_file_button"}}</span>
+          <span id="file-name" class="file-name">{{call .T "no_file_selected"}}</span>
+          <input id="file-input" class="file-input" type="file" name="file" required>
+        </span>
+      </label>
+      <label class="checkbox-label"><input type="checkbox" name="notify_requester" checked><span>{{call .T "notify_requester_label"}}</span></label>
+      <button type="submit"><i class="fa-solid fa-upload" aria-hidden="true"></i> {{call .T "upload_file_button"}}</button>
+    </form>
+  </section>
+</main>
+<footer class="app-footer">{{call .T "footer_copyright"}} {{.Version}}</footer>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!doctype html>
+<html id="error-html" lang="{{.Lang}}">
+<head id="error-head">
+  <meta id="error-meta-charset" charset="utf-8">
+  <meta id="error-meta-viewport" name="viewport" content="width=device-width,initial-scale=1">
+  <meta id="error-meta-robots" name="robots" content="noindex, nofollow">
+  <title id="error-title">{{.Title}}</title>
+  <link rel="icon" href="/brand/favicon">
+  <link id="error-stylesheet" rel="stylesheet" href="/static/app.css">
+</head>
+<body id="error-body">
+<main id="error-main" class="page narrow">
+  <a id="error-brand-link" class="brand" href="/">{{call .T "app_name"}}</a>
+  <article id="error-card" class="card">
+    <h1 id="error-heading">{{.Title}}</h1>
+    <p id="error-message">{{if .Error}}{{.Error}}{{else}}{{call .T "server_error"}}{{end}}</p>
+    <a id="error-home-link" class="secondary" href="/">{{call .T "create_another"}}</a>
+  </article>
+</main>
+<footer class="app-footer">{{call .T "footer_copyright"}} {{.Version}}</footer>
+</body>
+</html>

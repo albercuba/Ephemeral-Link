@@ -1,0 +1,492 @@
+<!doctype html>
+<html id="home-html" lang="{{.Lang}}">
+    <head id="home-head">
+        <meta id="home-meta-charset" charset="utf-8" />
+        <meta
+            id="home-meta-viewport"
+            name="viewport"
+            content="width=device-width,initial-scale=1"
+        />
+        <meta id="home-meta-robots" name="robots" content="noindex, nofollow" />
+        <title id="home-title">{{.Title}}</title>
+        <link
+            id="home-favicon"
+            rel="icon"
+            href="/brand/favicon"
+        />
+        <link
+            id="home-share-tech-mono-font"
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap"
+        />
+        <link
+            id="home-font-awesome"
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        />
+        <link id="home-stylesheet" rel="stylesheet" href="/static/app.css" />
+        <script id="home-script" src="/static/app.js" defer></script>
+    </head>
+    <body id="home-body">
+        <main id="home-main" class="page el-page">
+            <nav id="home-nav" class="nav el-nav">
+                <a id="home-brand-link" class="brand el-brand" href="/">
+                    {{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call .T "app_name"}}">{{else}}<span id="home-brand-mark" class="brand-mark">E</span>{{end}}
+                    <span id="home-brand-copy" class="brand-copy"
+                        ><strong id="home-brand-name"
+                            >{{call .T "app_name"}}</strong
+                        ></span
+                    >
+                </a>
+                <div id="home-nav-actions" class="nav-actions">
+                    {{if .User}}
+                    <span id="home-user-badge" class="user-badge"
+                        ><span class="user-badge-avatar"
+                            >{{if .User.FirstName}}{{printf "%.1s"
+                            .User.FirstName}}{{else}}{{printf "%.1s"
+                            .User.Username}}{{end}}</span
+                        ><span class="user-badge-copy"
+                            ><strong
+                                >{{if .User.FirstName}}{{.User.FirstName}}
+                                {{.User.LastName}}{{else}}{{.User.Username}}{{end}}</strong
+                            ><small>{{.User.Role}}</small></span
+                        ></span
+                    >
+                    {{if eq .User.Role "administrator"}}<a
+                        id="home-admin-link"
+                        href="/admin"
+                        >{{call .T "settings"}}</a
+                    >{{end}}
+                    <form
+                        id="home-logout-form"
+                        class="logout-form"
+                        method="post"
+                        action="/logout"
+                    >
+                        <input type="hidden" name="csrf" value="{{.CSRF}}" />
+                        <button id="home-logout-button" type="submit">
+                            {{call .T "sign_out"}}
+                        </button>
+                    </form>
+                    {{else}}
+                    <a id="home-sign-in-link" href="/login">{{call .T "sign_in"}}</a>
+                    {{end}}
+                    <form
+                        id="home-language-form"
+                        class="lang"
+                        method="post"
+                        action="/language"
+                    >
+                        <input
+                            id="home-language-csrf"
+                            type="hidden"
+                            name="csrf"
+                            value="{{.CSRF}}"
+                        />
+                        <i class="fa-solid fa-language" aria-hidden="true"></i>
+                        <select
+                            id="home-language-select"
+                            name="language"
+                            onchange="this.form.submit()"
+                            aria-label="{{call .T "language_label"}}"
+                        >
+                            {{range .Languages}}
+                            <option
+                                id="home-language-option-{{.}}"
+                                value="{{.}}"
+                                {{if
+                                eq
+                                .
+                                $.Lang}}selected{{end}}
+                            >
+                                {{.}}
+                            </option>
+                            {{end}}
+                        </select>
+                    </form>
+                </div>
+            </nav>
+
+            <section id="home-hero-section" class="hero el-hero">
+                <h1 id="home-hero-title">
+                    {{call .T "hero_title"}}
+                </h1>
+            </section>
+
+            {{if .Error}}
+            <div id="home-error-alert" class="alert">{{.Error}}</div>
+            {{end}}
+
+            <section
+                id="home-create-card"
+                class="card create-card el-create-card"
+            >
+                <div
+                    id="home-tabs"
+                    class="tabs"
+                    role="tablist"
+                    aria-label="{{call .T "secret_type_label"}}"
+                >
+                    <button
+                        id="home-tab-text"
+                        class="tab-btn active"
+                        type="button"
+                        role="tab"
+                        aria-selected="true"
+                        aria-controls="panel-text"
+                        data-tab="text"
+                    >
+                        {{call .T "text_tab"}}
+                    </button>
+                    <button
+                        id="home-tab-file"
+                        class="tab-btn"
+                        type="button"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="panel-file"
+                        data-tab="file"
+                    >
+                        {{call .T "file_tab"}}
+                    </button>
+                    <button
+                        id="home-tab-get-file"
+                        class="tab-btn"
+                        type="button"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="panel-get-file"
+                        data-tab="get-file"
+                    >
+                        {{call .T "get_file_tab"}}
+                    </button>
+                </div>
+
+                <div
+                    id="panel-text"
+                    class="tab-panel active"
+                    role="tabpanel"
+                    aria-labelledby="home-tab-text"
+                >
+                    <form
+                        id="home-text-form"
+                        method="post"
+                        action="/secrets/text"
+                    >
+                        <input
+                            id="home-text-csrf"
+                            type="hidden"
+                            name="csrf"
+                            value="{{.CSRF}}"
+                        />
+                        <label
+                            id="home-text-secret-label"
+                            class="full-field"
+                            for="home-text-secret-input"
+                        >
+                            <span
+                                id="home-text-secret-label-text"
+                                class="sr-label"
+                                >{{call .T "secret_label"}}</span
+                            >
+                            <textarea
+                                id="home-text-secret-input"
+                                name="secret"
+                                required
+                                autocomplete="off"
+                                spellcheck="false"
+                                placeholder="{{call .T "secret_placeholder"}}"
+                            ></textarea>
+                        </label>
+                        <div id="home-text-options" class="form-columns">
+                            <label
+                                id="home-text-password-label"
+                                for="home-text-password-input"
+                            >
+                                {{call .T "passphrase_label"}}
+                                <span class="passphrase-input-wrap">
+                                    <input
+                                        id="home-text-password-input"
+                                        type="password"
+                                        name="passphrase"
+                                        autocomplete="new-password"
+                                        placeholder="{{call .T "password_placeholder"}}"
+                                    />
+                                    <span class="passphrase-actions">
+                                        <button
+                                            id="home-text-password-generate"
+                                            class="passphrase-action-button"
+                                            type="button"
+                                            data-generate-passphrase="home-text-password-input"
+                                            aria-label="{{call .T "generate_passphrase_label"}}"
+                                            title="{{call .T "generate_passphrase_label"}}"
+                                        >
+                                            <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                                        </button>
+                                        <button
+                                            id="home-text-password-reveal"
+                                            class="passphrase-action-button"
+                                            type="button"
+                                            data-reveal-passphrase="home-text-password-input"
+                                            aria-label="{{call .T "reveal_passphrase_label"}}"
+                                            title="{{call .T "reveal_passphrase_label"}}"
+                                            hidden
+                                        >
+                                            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                                        </button>
+                                        <button
+                                            id="home-text-password-copy"
+                                            class="passphrase-action-button"
+                                            type="button"
+                                            data-copy-passphrase="home-text-password-input"
+                                            aria-label="{{call .T "copy_passphrase_label"}}"
+                                            title="{{call .T "copy_passphrase_label"}}"
+                                            hidden
+                                        >
+                                            <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                                        </button>
+                                    </span>
+                                </span>
+                            </label>
+                            <label
+                                id="home-text-ttl-label"
+                                for="home-text-ttl-select"
+                            >
+                                {{call .T "expires_label"}}
+                                <select id="home-text-ttl-select" name="ttl">
+                                    {{range .TTLs}}
+                                    <option
+                                        id="home-text-ttl-option-{{.Seconds}}"
+                                        value="{{.Seconds}}"
+                                    >
+                                        {{.Label}}
+                                    </option>
+                                    {{end}}
+                                </select>
+                            </label>
+                        </div>
+                        <label id="home-text-recipient-label" class="full-field" for="home-text-recipient-input">
+                            {{call .T "send_link_email_label"}}
+                            <input id="home-text-recipient-input" type="email" name="recipient_email" autocomplete="email" placeholder="{{call .T "send_link_email_placeholder"}}" />
+                        </label>
+                        <article
+                            id="home-text-warning-card"
+                            class="warning-card"
+                            aria-label="{{call .T "warning_label"}}"
+                        >
+                            <i
+                                id="home-text-warning-icon"
+                                class="fa-solid fa-circle-exclamation warning-icon"
+                                aria-hidden="true"
+                            ></i>
+                            <p id="home-text-warning-text">
+                                {{call .T "one_time_warning"}}
+                            </p>
+                        </article>
+                        <div id="home-text-action-row" class="action-row">
+                            <button id="home-text-submit-button" type="submit">
+                                <i
+                                    class="fa-solid fa-link"
+                                    aria-hidden="true"
+                                ></i>
+                                {{call .T "create_text_button"}}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div
+                    id="panel-file"
+                    class="tab-panel"
+                    role="tabpanel"
+                    aria-labelledby="home-tab-file"
+                    hidden
+                >
+                    <form
+                        id="home-file-form"
+                        method="post"
+                        action="/secrets/file"
+                        enctype="multipart/form-data"
+                    >
+                        <input
+                            id="home-file-csrf"
+                            type="hidden"
+                            name="csrf"
+                            value="{{.CSRF}}"
+                        />
+                        <label
+                            id="home-file-input-label"
+                            class="full-field"
+                            for="home-file-input"
+                        >
+                            {{call .T "file_label"}}
+                            <span id="home-file-control" class="file-control">
+                                <span id="home-file-button" class="file-button"
+                                    ><i
+                                        class="fa-solid fa-file"
+                                        aria-hidden="true"
+                                    ></i>
+                                    {{call .T "choose_file_button"}}</span
+                                >
+                                <span id="home-file-name" class="file-name"
+                                    >{{call .T "no_file_selected"}}</span
+                                >
+                                <input
+                                    id="home-file-input"
+                                    class="file-input"
+                                    type="file"
+                                    name="file"
+                                    required
+                                />
+                            </span>
+                        </label>
+                        <div id="home-file-options" class="form-columns">
+                            <label
+                                id="home-file-password-label"
+                                for="home-file-password-input"
+                            >
+                                {{call .T "passphrase_label"}}
+                                <span class="passphrase-input-wrap">
+                                    <input
+                                        id="home-file-password-input"
+                                        type="password"
+                                        name="passphrase"
+                                        autocomplete="new-password"
+                                        placeholder="{{call .T "password_placeholder"}}"
+                                    />
+                                    <span class="passphrase-actions">
+                                        <button
+                                            id="home-file-password-generate"
+                                            class="passphrase-action-button"
+                                            type="button"
+                                            data-generate-passphrase="home-file-password-input"
+                                            aria-label="{{call .T "generate_passphrase_label"}}"
+                                            title="{{call .T "generate_passphrase_label"}}"
+                                        >
+                                            <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                                        </button>
+                                        <button
+                                            id="home-file-password-reveal"
+                                            class="passphrase-action-button"
+                                            type="button"
+                                            data-reveal-passphrase="home-file-password-input"
+                                            aria-label="{{call .T "reveal_passphrase_label"}}"
+                                            title="{{call .T "reveal_passphrase_label"}}"
+                                            hidden
+                                        >
+                                            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                                        </button>
+                                        <button
+                                            id="home-file-password-copy"
+                                            class="passphrase-action-button"
+                                            type="button"
+                                            data-copy-passphrase="home-file-password-input"
+                                            aria-label="{{call .T "copy_passphrase_label"}}"
+                                            title="{{call .T "copy_passphrase_label"}}"
+                                            hidden
+                                        >
+                                            <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                                        </button>
+                                    </span>
+                                </span>
+                            </label>
+                            <label
+                                id="home-file-ttl-label"
+                                for="home-file-ttl-select"
+                            >
+                                {{call .T "expires_label"}}
+                                <select id="home-file-ttl-select" name="ttl">
+                                    {{range .TTLs}}
+                                    <option
+                                        id="home-file-ttl-option-{{.Seconds}}"
+                                        value="{{.Seconds}}"
+                                    >
+                                        {{.Label}}
+                                    </option>
+                                    {{end}}
+                                </select>
+                            </label>
+                        </div>
+                        <label id="home-file-recipient-label" class="full-field" for="home-file-recipient-input">
+                            {{call .T "send_link_email_label"}}
+                            <input id="home-file-recipient-input" type="email" name="recipient_email" autocomplete="email" placeholder="{{call .T "send_link_email_placeholder"}}" />
+                        </label>
+                        <article
+                            id="home-file-warning-card"
+                            class="warning-card"
+                            aria-label="{{call .T "warning_label"}}"
+                        >
+                            <i
+                                id="home-file-warning-icon"
+                                class="fa-solid fa-circle-exclamation warning-icon"
+                                aria-hidden="true"
+                            ></i>
+                            <p id="home-file-warning-text">
+                                {{call .T "one_time_warning"}}
+                            </p>
+                        </article>
+                        <div id="home-file-action-row" class="action-row">
+                            <button id="home-file-submit-button" type="submit">
+                                <i
+                                    class="fa-solid fa-link"
+                                    aria-hidden="true"
+                                ></i>
+                                {{call .T "create_file_button"}}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div
+                    id="panel-get-file"
+                    class="tab-panel"
+                    role="tabpanel"
+                    aria-labelledby="home-tab-get-file"
+                    hidden
+                >
+                    <form method="post" action="/upload-requests">
+                        <input type="hidden" name="csrf" value="{{.CSRF}}" />
+                        <h2>{{call .T "request_upload_title"}}</h2>
+                        <p>{{call .T "request_upload_desc"}}</p>
+                        <input type="hidden" name="delivery" value="link">
+                        <label>{{call .T "expires_label"}}<select name="ttl">{{range .TTLs}}<option value="{{.Seconds}}">{{.Label}}</option>{{end}}</select></label>
+                        <article class="warning-card" aria-label="{{call .T "warning_label"}}">
+                            <i class="fa-solid fa-circle-exclamation warning-icon" aria-hidden="true"></i>
+                            <p>{{call .T "one_time_warning"}}</p>
+                        </article>
+                        <div class="action-row"><button type="submit"><i class="fa-solid fa-link" aria-hidden="true"></i> {{call .T "create_upload_link_button"}}</button></div>
+                    </form>
+                </div>
+            </section>
+
+            <section
+                id="home-history-section"
+                class="history-section"
+                aria-live="polite"
+                data-item-label="{{call .T "item_label"}}"
+                data-items-label="{{call .T "items_label"}}"
+                data-send-label="{{call .T "send_link_label"}}"
+                data-receive-label="{{call .T "receive_link_label"}}"
+                data-get-file-label="{{call .T "get_file_button"}}"
+                data-waiting-file-label="{{call .T "waiting_file_button"}}"
+                hidden
+            >
+                <div id="home-history-header" class="history-header">
+                    <h2 id="home-history-title">{{call .T "my_links"}}</h2>
+                    <div id="home-history-meta" class="history-meta">
+                        <span id="home-history-count">0 {{call .T "items_label"}}</span>
+                        <button
+                            id="home-history-clear"
+                            type="button"
+                            aria-label="{{call .T "clear_history"}}"
+                        >
+                            ×
+                        </button>
+                    </div>
+                </div>
+                <div id="home-history-list" class="history-list"></div>
+            </section>
+        </main>
+    <footer class="app-footer">{{call .T "footer_copyright"}} {{.Version}}</footer>
+</body>
+</html>

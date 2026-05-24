@@ -1,0 +1,48 @@
+<!doctype html>
+<html id="setup-html" lang="{{.Lang}}">
+<head id="setup-head">
+  <meta id="setup-meta-charset" charset="utf-8">
+  <meta id="setup-meta-viewport" name="viewport" content="width=device-width,initial-scale=1">
+  <title id="setup-title">{{.Title}}</title>
+  <link rel="icon" href="/brand/favicon">
+  <link id="setup-share-tech-mono-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap">
+  <link id="setup-font-awesome" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link id="setup-stylesheet" rel="stylesheet" href="/static/app.css">
+</head>
+<body id="setup-body">
+<main id="setup-main" class="page narrow auth-page">
+  <a id="setup-brand-link" class="brand el-brand" href="/setup">{{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call .T "app_name"}}">{{else}}<span id="setup-brand-mark" class="brand-mark">E</span>{{end}}<span id="setup-brand-copy" class="brand-copy"><strong>{{call .T "app_name"}}</strong></span></a>
+  <article id="setup-card" class="created-card auth-card">
+    <section id="setup-status-panel" class="created-status-panel auth-card-panel">
+      <h1 id="setup-heading">{{call .T "setup_title"}}</h1>
+      <p id="setup-description">{{call .T "setup_desc"}}</p>
+      <div id="setup-error-alert" class="alert" {{if not .Error}}hidden{{end}}>{{.Error}}</div>
+      <form id="setup-form" method="post" action="/setup" autocomplete="off">
+        <input id="setup-csrf" type="hidden" name="csrf" value="{{.CSRF}}">
+        <label id="setup-username-label" for="setup-username-input">{{call .T "username_label"}}
+          <input id="setup-username-input" type="text" name="username" autocomplete="off" autocapitalize="none" spellcheck="false" required autofocus>
+        </label>
+        <label id="setup-first-name-label" for="setup-first-name-input">{{call .T "first_name_label"}}
+          <input id="setup-first-name-input" type="text" name="first_name" autocomplete="off">
+        </label>
+        <label id="setup-last-name-label" for="setup-last-name-input">{{call .T "last_name_label"}}
+          <input id="setup-last-name-input" type="text" name="last_name" autocomplete="off">
+        </label>
+        <label id="setup-email-label" for="setup-email-input">{{call .T "email_label"}}
+          <input id="setup-email-input" type="email" name="email" autocomplete="off">
+        </label>
+        <label id="setup-password-label" for="setup-password-input">{{call .T "password_label"}}
+          <input id="setup-password-input" type="password" name="password" autocomplete="new-password" minlength="12" required>
+        </label>
+        <label id="setup-password-confirm-label" for="setup-password-confirm-input">{{call .T "password_confirm_label"}}
+          <input id="setup-password-confirm-input" type="password" name="password_confirm" autocomplete="new-password" minlength="12" required>
+        </label>
+        <p id="setup-password-help" class="created-security-note">{{call .T "setup_password_help"}}</p>
+        <button id="setup-submit-button" type="submit">{{call .T "setup_create_admin"}}</button>
+      </form>
+    </section>
+  </article>
+</main>
+<footer class="app-footer">{{call .T "footer_copyright"}} {{.Version}}</footer>
+</body>
+</html>
