@@ -1535,6 +1535,7 @@ textarea,
     border: 1px solid #dfe7ef;
     background: #ffffff;
     color: #304056;
+    margin-left: 3.2rem;
 }
 
 .audit-reset-button:hover {
