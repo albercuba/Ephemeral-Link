@@ -714,7 +714,8 @@ input::placeholder {
 }
 
 .action-row button,
-.burn-button {
+.burn-button,
+.audit-apply-button {
     border-radius: var(--radius);
     background: linear-gradient(90deg, var(--el-orange-2), #ff9f0a);
     color: #111827;
@@ -1507,10 +1508,32 @@ textarea,
     gap: 0.75rem;
 }
 
-.audit-filter-actions .secondary,
+.audit-apply-button,
+.audit-reset-button,
 .audit-pagination .secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3.05rem;
     margin-top: 0;
     padding: 0.85rem 1rem;
+    border-radius: var(--radius);
+    font-weight: 1;
+    text-decoration: none;
+}
+
+.audit-reset-button {
+    border: 1px solid #dfe7ef;
+    background: #ffffff;
+    color: #304056;
+}
+
+.audit-reset-button:hover {
+    border-color: var(--el-orange-2);
+    background: #fff7ed;
+    color: #111827;
+    filter: none;
+    transform: none;
 }
 
 .audit-pagination-summary {

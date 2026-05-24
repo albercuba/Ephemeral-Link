@@ -248,11 +248,12 @@
   "audit_filter_search": "Suche",
   "audit_filter_search_placeholder": "Ziel, Details, IP...",
   "apply_filters": "Filter anwenden",
-  "clear_filters": "Filter löschen",
+  "clear_filters": "Filter zurücksetzen",
   "audit_showing": "Zeige",
   "audit_of": "von",
   "audit_pagination_label": "Audit-Log-Seiten",
   "previous_page": "Zurück",
   "next_page": "Weiter",
-  "page_label": "Seite"
+  "page_label": "Seite",
+  "reset_filters": "Filter zurücksetzen"
 }
