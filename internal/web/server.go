@@ -52,6 +52,7 @@ type Page struct {
 	UploadRequests                                                                              []redisstore.UploadRequest
 	AuditEvents                                                                                 []redisstore.AuditEvent
 	AuditFilterEvent                                                                            string
+	AuditCSVURL                                                                                 string
 	AuditFilterResult                                                                           string
 	AuditFilterActor                                                                            string
 	AuditFilterQuery                                                                            string
@@ -154,6 +155,7 @@ func (a *App) Routes() http.Handler {
 		r.Get("/upload-requests/{id}/download", a.downloadUploadRequestFile)
 		r.Get("/created", a.created)
 		r.Get("/admin", a.admin)
+		r.Get("/admin/audit.csv", a.adminAuditCSV)
 		r.Post("/admin/links/{id}/burn", a.adminBurnLink)
 		r.Post("/admin/upload-requests/{id}/burn", a.adminBurnUploadRequest)
 		r.Post("/admin/users", a.adminSaveUser)

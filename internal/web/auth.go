@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -320,23 +321,24 @@ func (a *App) admin(w http.ResponseWriter, r *http.Request) {
 	analytics := buildAdminAnalytics(items, uploadRequests, allAuditEvents)
 	disk := diskInfo(a.cfg.StoragePath)
 	message := adminSavedMessage(a.t(r, "settings_saved_"+r.URL.Query().Get("saved")))
-	a.render(w, r, 200, "admin.html", Page{Title: "Admin", User: user, Items: items, UploadRequests: uploadRequests, AuditEvents: auditPage.Events, AuditFilterEvent: auditPage.Event, AuditFilterResult: auditPage.Result, AuditFilterActor: auditPage.Actor, AuditFilterQuery: auditPage.Query, AuditPage: auditPage.Page, AuditTotal: auditPage.Total, AuditStart: auditPage.Start, AuditEnd: auditPage.End, AuditPrevURL: auditPage.PrevURL, AuditNextURL: auditPage.NextURL, AuditHasPrev: auditPage.HasPrev, AuditHasNext: auditPage.HasNext, HasLinks: len(items)+len(uploadRequests) > 0, Users: users, Integration: integration, Disk: disk, Analytics: analytics, Message: message})
+	a.render(w, r, 200, "admin.html", Page{Title: "Admin", User: user, Items: items, UploadRequests: uploadRequests, AuditEvents: auditPage.Events, AuditFilterEvent: auditPage.Event, AuditCSVURL: auditCSVURL(r.URL.Query()), AuditFilterResult: auditPage.Result, AuditFilterActor: auditPage.Actor, AuditFilterQuery: auditPage.Query, AuditPage: auditPage.Page, AuditTotal: auditPage.Total, AuditStart: auditPage.Start, AuditEnd: auditPage.End, AuditPrevURL: auditPage.PrevURL, AuditNextURL: auditPage.NextURL, AuditHasPrev: auditPage.HasPrev, AuditHasNext: auditPage.HasNext, HasLinks: len(items)+len(uploadRequests) > 0, Users: users, Integration: integration, Disk: disk, Analytics: analytics, Message: message})
 }
 
 type auditPageData struct {
-	Events  []redisstore.AuditEvent
-	Event   string
-	Result  string
-	Actor   string
-	Query   string
-	Page    int
-	Total   int
-	Start   int
-	End     int
-	PrevURL string
-	NextURL string
-	HasPrev bool
-	HasNext bool
+	Events   []redisstore.AuditEvent
+	Filtered []redisstore.AuditEvent
+	Event    string
+	Result   string
+	Actor    string
+	Query    string
+	Page     int
+	Total    int
+	Start    int
+	End      int
+	PrevURL  string
+	NextURL  string
+	HasPrev  bool
+	HasNext  bool
 }
 
 const auditPageSize = 50
@@ -367,6 +369,7 @@ func buildAuditPage(r *http.Request, events []redisstore.AuditEvent) auditPageDa
 		}
 		filtered = append(filtered, event)
 	}
+	filters.Filtered = filtered
 	filters.Total = len(filtered)
 	pages := (filters.Total + auditPageSize - 1) / auditPageSize
 	if pages == 0 {
@@ -397,14 +400,51 @@ func buildAuditPage(r *http.Request, events []redisstore.AuditEvent) auditPageDa
 }
 
 func auditPageURL(values url.Values, page int) string {
+	copy := auditQuery(values)
+	copy.Set("audit_page", strconv.Itoa(page))
+	return "/admin?" + copy.Encode() + "#audit-logs"
+}
+
+func auditCSVURL(values url.Values) string {
+	query := auditQuery(values)
+	if len(query) == 0 {
+		return "/admin/audit.csv"
+	}
+	return "/admin/audit.csv?" + query.Encode()
+}
+
+func auditQuery(values url.Values) url.Values {
 	copy := url.Values{}
-	for key, vals := range values {
-		for _, val := range vals {
+	for _, key := range []string{"audit_event", "audit_result", "audit_actor", "audit_q"} {
+		for _, val := range values[key] {
 			copy.Add(key, val)
 		}
 	}
-	copy.Set("audit_page", strconv.Itoa(page))
-	return "/admin?" + copy.Encode() + "#audit-logs"
+	return copy
+}
+
+func (a *App) adminAuditCSV(w http.ResponseWriter, r *http.Request) {
+	if _, ok := a.requireAdmin(w, r); !ok {
+		return
+	}
+	events, err := a.store.ListAuditEvents(r.Context(), 500)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	filtered := buildAuditPage(r, events).Filtered
+	filename := "audit-logs-" + time.Now().UTC().Format("20060102-150405") + ".csv"
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	writer := csv.NewWriter(w)
+	_ = writer.Write([]string{"time", "actor", "event", "target", "result", "details", "ip"})
+	for _, event := range filtered {
+		_ = writer.Write([]string{time.Unix(event.CreatedAt, 0).UTC().Format(time.RFC3339), event.Actor, event.Event, event.Target, event.Result, event.Details, event.IP})
+	}
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		a.log.Error("audit csv export failed", "error", err)
+	}
 }
 
 func buildAdminAnalytics(items []redisstore.Item, uploadRequests []redisstore.UploadRequest, auditEvents []redisstore.AuditEvent) AdminAnalytics {

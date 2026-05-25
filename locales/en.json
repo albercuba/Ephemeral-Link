@@ -252,6 +252,7 @@
   "audit_showing": "Showing",
   "audit_of": "of",
   "audit_pagination_label": "Audit log pages",
+  "audit_download_csv": "Download audit logs as CSV",
   "previous_page": "Previous",
   "next_page": "Next",
   "page_label": "Page",
