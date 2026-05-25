@@ -46,6 +46,7 @@ type Page struct {
 	Size                                                                                        int64
 	ExpiresAt                                                                                   string
 	HasPassphrase                                                                               bool
+	EmailConfigured                                                                             bool
 	User                                                                                        *redisstore.User
 	Users                                                                                       []redisstore.User
 	Items                                                                                       []redisstore.Item
@@ -700,6 +701,9 @@ func (a *App) render(w http.ResponseWriter, r *http.Request, status int, name st
 	p.TTLs = []ttlOpt{{"1 minute", 60}, {"5 minutes", 300}, {"30 minutes", 1800}, {"1 hour", 3600}, {"4 hours", 14400}, {"12 hours", 43200}, {"1 day", 86400}, {"3 days", 259200}, {"7 days", 604800}, {"14 days", 1209600}, {"30 days", 2592000}}
 	if _, err := os.Stat(a.logoPath()); err == nil {
 		p.LogoURL = "/brand/logo"
+	}
+	if cfg, err := a.store.GetIntegrationConfig(r.Context()); err == nil {
+		p.EmailConfigured = cfg.SMTPEnabled || cfg.GraphEnabled
 	}
 	w.WriteHeader(status)
 	if err := a.templates.ExecuteTemplate(w, name, p); err != nil {

@@ -1634,6 +1634,19 @@ textarea,
     font-weight: 900;
 }
 
+.email-config-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #b45309;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.email-config-warning i {
+    color: var(--el-orange, var(--accent));
+}
+
 .toggle-label input[type="checkbox"] {
     position: absolute;
     width: 1px;

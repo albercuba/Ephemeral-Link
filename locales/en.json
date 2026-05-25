@@ -221,6 +221,7 @@
   "setup_unavailable": "Setup is no longer available because an administrator already exists or another setup is in progress.",
   "send_link_email_label": "Email link to recipient",
   "send_link_email_placeholder": "recipient@example.com",
+  "email_not_configured_warning": "Email settings are not configured.",
   "created_link_email_subject": "Secure link from Ephemeral Link",
   "created_link_email_body": "%s shared a secure %s link with you: %s",
   "admin_analytics": "Analytics",

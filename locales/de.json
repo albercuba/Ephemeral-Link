@@ -221,6 +221,7 @@
   "setup_unavailable": "Die Einrichtung ist nicht mehr verfügbar, weil bereits ein Administrator existiert oder eine andere Einrichtung läuft.",
   "send_link_email_label": "Link per E-Mail an Empfänger senden",
   "send_link_email_placeholder": "empfaenger@example.com",
+  "email_not_configured_warning": "E-Mail-Einstellungen sind nicht konfiguriert.",
   "created_link_email_subject": "Sicherer Link von Ephemeral Link",
   "created_link_email_body": "%s hat einen sicheren %s-Link mit dir geteilt: %s",
   "admin_analytics": "Analysen",
