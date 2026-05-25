@@ -1634,17 +1634,15 @@ textarea,
     font-weight: 900;
 }
 
-.email-config-warning {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    color: #b45309;
-    font-size: 0.78rem;
-    font-weight: 800;
+.email-config-warning-card {
+    margin: 0;
+    border-width: 1px;
+    border-radius: var(--radius);
+    padding: 0.85rem 1rem;
 }
 
-.email-config-warning i {
-    color: var(--el-orange, var(--accent));
+.email-config-warning-card p {
+    margin: 0;
 }
 
 .toggle-label input[type="checkbox"] {

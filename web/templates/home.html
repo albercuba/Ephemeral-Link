@@ -278,7 +278,7 @@
                                 <span class="toggle-control" aria-hidden="true"></span>
                                 <span>{{call .T "send_link_email_label"}}</span>
                             </label>
-                            {{if not .EmailConfigured}}<span class="email-config-warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>{{call .T "email_not_configured_warning"}}</span>{{end}}
+                            {{if not .EmailConfigured}}<article class="warning-card email-config-warning-card" aria-label="{{call .T "warning_label"}}"><i class="fa-solid fa-circle-exclamation warning-icon" aria-hidden="true"></i><p>{{call .T "email_not_configured_warning"}}</p></article>{{end}}
                             <label id="home-text-recipient-field" class="full-field email-recipient-field" for="home-text-recipient-input" hidden>
                                 <span class="sr-label">{{call .T "send_link_email_label"}}</span>
                                 <input id="home-text-recipient-input" type="email" name="recipient_email" autocomplete="email" placeholder="{{call .T "send_link_email_placeholder"}}" />
@@ -428,7 +428,7 @@
                                 <span class="toggle-control" aria-hidden="true"></span>
                                 <span>{{call .T "send_link_email_label"}}</span>
                             </label>
-                            {{if not .EmailConfigured}}<span class="email-config-warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>{{call .T "email_not_configured_warning"}}</span>{{end}}
+                            {{if not .EmailConfigured}}<article class="warning-card email-config-warning-card" aria-label="{{call .T "warning_label"}}"><i class="fa-solid fa-circle-exclamation warning-icon" aria-hidden="true"></i><p>{{call .T "email_not_configured_warning"}}</p></article>{{end}}
                             <label id="home-file-recipient-field" class="full-field email-recipient-field" for="home-file-recipient-input" hidden>
                                 <span class="sr-label">{{call .T "send_link_email_label"}}</span>
                                 <input id="home-file-recipient-input" type="email" name="recipient_email" autocomplete="email" placeholder="{{call .T "send_link_email_placeholder"}}" />
@@ -479,7 +479,7 @@
                                 <span class="toggle-control" aria-hidden="true"></span>
                                 <span>{{call .T "send_link_email_label"}}</span>
                             </label>
-                            {{if not .EmailConfigured}}<span class="email-config-warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>{{call .T "email_not_configured_warning"}}</span>{{end}}
+                            {{if not .EmailConfigured}}<article class="warning-card email-config-warning-card" aria-label="{{call .T "warning_label"}}"><i class="fa-solid fa-circle-exclamation warning-icon" aria-hidden="true"></i><p>{{call .T "email_not_configured_warning"}}</p></article>{{end}}
                             <label id="home-get-file-recipient-field" class="full-field email-recipient-field" for="home-get-file-recipient-input" hidden>
                                 <span class="sr-label">{{call .T "send_link_email_label"}}</span>
                                 <input id="home-get-file-recipient-input" type="email" name="recipient_email" autocomplete="email" placeholder="{{call .T "send_link_email_placeholder"}}" />
