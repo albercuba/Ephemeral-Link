@@ -177,10 +177,32 @@ textarea {
         border-color 0.18s ease;
 }
 
+.theme-toggle-track::before,
+.theme-toggle-track::after {
+    position: absolute;
+    top: 50%;
+    z-index: 0;
+    color: #64748b;
+    font-size: 0.7rem;
+    line-height: 1;
+    transform: translateY(-50%);
+}
+
+.theme-toggle-track::before {
+    left: 0.34rem;
+    content: "☀";
+}
+
+.theme-toggle-track::after {
+    right: 0.34rem;
+    content: "☾";
+}
+
 .theme-toggle-thumb {
     position: absolute;
     top: 50%;
     left: 0.17rem;
+    z-index: 1;
     width: 1.05rem;
     height: 1.05rem;
     border-radius: 999px;
@@ -2053,6 +2075,89 @@ html[data-theme="dark"] .email-config-warning-card .warning-icon {
 
 .admin-table form {
     display: inline-block;
+}
+
+.admin-user-form .enhanced-select-toggle,
+.user-edit-form .enhanced-select-toggle {
+    background-color: color-mix(in srgb, var(--card) 88%, transparent);
+    color: var(--text);
+}
+
+.admin-user-form .enhanced-select-menu button,
+.user-edit-form .enhanced-select-menu button {
+    background: transparent;
+    color: var(--text);
+}
+
+.admin-user-form .enhanced-select-menu button:hover,
+.admin-user-form .enhanced-select-menu button:focus-visible,
+.admin-user-form .enhanced-select-menu button[aria-selected="true"],
+.user-edit-form .enhanced-select-menu button:hover,
+.user-edit-form .enhanced-select-menu button:focus-visible,
+.user-edit-form .enhanced-select-menu button[aria-selected="true"] {
+    background: #fff7ed;
+    color: var(--el-orange, var(--accent));
+    filter: none;
+    transform: none;
+}
+
+html[data-theme="dark"] .admin-user-form .enhanced-select-toggle,
+html[data-theme="dark"] .user-edit-form .enhanced-select-toggle {
+    border-color: var(--line);
+    background-color: #020617;
+    color: var(--text);
+}
+
+html[data-theme="dark"] .admin-user-form .enhanced-select-menu button,
+html[data-theme="dark"] .user-edit-form .enhanced-select-menu button {
+    background: transparent;
+    color: var(--text);
+}
+
+html[data-theme="dark"]
+    .admin-user-form
+    .enhanced-select-menu
+    button[aria-selected="true"],
+html[data-theme="dark"]
+    .user-edit-form
+    .enhanced-select-menu
+    button[aria-selected="true"] {
+    background: rgba(255, 159, 10, 0.14);
+    color: #fdba74;
+}
+
+html[data-theme="dark"] .admin-user-form .enhanced-select-menu button:hover,
+html[data-theme="dark"]
+    .admin-user-form
+    .enhanced-select-menu
+    button:focus-visible,
+html[data-theme="dark"] .user-edit-form .enhanced-select-menu button:hover,
+html[data-theme="dark"]
+    .user-edit-form
+    .enhanced-select-menu
+    button:focus-visible {
+    background: #111827;
+    color: var(--text);
+}
+
+html[data-theme="dark"]
+    .admin-user-form
+    .enhanced-select-menu
+    button[aria-selected="true"]:hover,
+html[data-theme="dark"]
+    .admin-user-form
+    .enhanced-select-menu
+    button[aria-selected="true"]:focus-visible,
+html[data-theme="dark"]
+    .user-edit-form
+    .enhanced-select-menu
+    button[aria-selected="true"]:hover,
+html[data-theme="dark"]
+    .user-edit-form
+    .enhanced-select-menu
+    button[aria-selected="true"]:focus-visible {
+    background: rgba(255, 159, 10, 0.2);
+    color: #fed7aa;
 }
 
 .table-search {
