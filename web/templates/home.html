@@ -79,26 +79,37 @@
                             name="csrf"
                             value="{{.CSRF}}"
                         />
-                        <i class="fa-solid fa-language" aria-hidden="true"></i>
-                        <select
-                            id="home-language-select"
-                            name="language"
-                            onchange="this.form.submit()"
+                        <button
+                            id="home-language-toggle"
+                            class="lang-toggle"
+                            type="button"
                             aria-label="{{call .T "language_label"}}"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            data-lang-toggle
+                        >
+                            <i class="fa-solid fa-language" aria-hidden="true"></i>
+                        </button>
+                        <div
+                            id="home-language-menu"
+                            class="lang-menu"
+                            role="listbox"
+                            aria-label="{{call .T "language_label"}}"
+                            hidden
                         >
                             {{range .Languages}}
-                            <option
+                            <button
                                 id="home-language-option-{{.}}"
+                                type="submit"
+                                name="language"
                                 value="{{.}}"
-                                {{if
-                                eq
-                                .
-                                $.Lang}}selected{{end}}
+                                role="option"
+                                aria-selected="{{if eq . $.Lang}}true{{else}}false{{end}}"
                             >
                                 {{.}}
-                            </option>
+                            </button>
                             {{end}}
-                        </select>
+                        </div>
                     </form>
                 </div>
             </nav>

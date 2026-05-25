@@ -107,25 +107,80 @@ textarea {
 }
 
 .lang .fa-language {
-    position: absolute;
-    inset: 50% auto auto 50%;
-    z-index: 1;
     color: var(--muted);
     font-size: 1.6rem;
     line-height: 1;
     pointer-events: none;
-    transform: translate(-50%, -50%);
 }
 
 .lang select {
+    border: 0;
+    border-radius: var(--radius);
+}
+
+.lang-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 3rem;
     height: 3rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--muted);
+}
+
+.lang-toggle:hover,
+.lang-toggle:focus-visible,
+.lang.open .lang-toggle {
+    background: transparent;
+    filter: none;
+    transform: none;
+}
+
+.lang-toggle:hover .fa-language,
+.lang-toggle:focus-visible .fa-language,
+.lang.open .fa-language {
+    color: var(--el-orange, var(--accent));
+}
+
+.lang-menu {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    right: 0;
+    z-index: 20;
+    display: grid;
+    min-width: 6rem;
+    overflow: hidden;
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: 0;
-    background-image: none;
-    color: transparent;
-    cursor: pointer;
+    background: var(--card);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+}
+
+.lang-menu[hidden] {
+    display: none;
+}
+
+.lang-menu button {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    font-weight: 800;
+}
+
+.lang-menu button:hover,
+.lang-menu button:focus-visible,
+.lang-menu button[aria-selected="true"] {
+    background: #fff7ed;
+    color: var(--el-orange, var(--accent));
+    filter: none;
+    transform: none;
 }
 
 select {
@@ -573,9 +628,9 @@ textarea,
 
 .nav-actions .lang select {
     min-width: 0;
-    border-color: #dfe7ef;
+    border: 0;
     border-radius: var(--radius);
-    background-color: #ffffff;
+    background-color: transparent;
     color: transparent;
 }
 

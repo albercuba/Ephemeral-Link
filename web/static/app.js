@@ -31,6 +31,35 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  /* ── Language menu ───────────────────────────────────────────────────── */
+  document.querySelectorAll("[data-lang-toggle]").forEach((toggle) => {
+    const form = toggle.closest(".lang");
+    const menu = form?.querySelector(".lang-menu");
+    if (!form || !menu) return;
+
+    const setOpen = (open) => {
+      form.classList.toggle("open", open);
+      menu.hidden = !open;
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    };
+
+    toggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setOpen(menu.hidden);
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!form.contains(event.target)) setOpen(false);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        toggle.focus();
+      }
+    });
+  });
+
   /* ── Admin section menu ──────────────────────────────────────────────── */
   const adminMenuButtons = document.querySelectorAll("[data-admin-tab]");
   const adminPanels = document.querySelectorAll("[data-admin-panel]");
