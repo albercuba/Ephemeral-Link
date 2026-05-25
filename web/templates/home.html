@@ -276,8 +276,9 @@
                             <label id="home-text-email-toggle-label" class="toggle-label" for="home-text-email-toggle">
                                 <input id="home-text-email-toggle" type="checkbox" role="switch" data-email-toggle data-email-target="home-text-recipient-field" />
                                 <span class="toggle-control" aria-hidden="true"></span>
-                                <span>{{call .T "send_link_email_label"}}</span>{{if not .EmailConfigured}}<span class="email-config-warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>{{call .T "email_not_configured_warning"}}</span>{{end}}
+                                <span>{{call .T "send_link_email_label"}}</span>
                             </label>
+                            {{if not .EmailConfigured}}<span class="email-config-warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>{{call .T "email_not_configured_warning"}}</span>{{end}}
                             <label id="home-text-recipient-field" class="full-field email-recipient-field" for="home-text-recipient-input" hidden>
                                 <span class="sr-label">{{call .T "send_link_email_label"}}</span>
                                 <input id="home-text-recipient-input" type="email" name="recipient_email" autocomplete="email" placeholder="{{call .T "send_link_email_placeholder"}}" />
@@ -425,8 +426,9 @@
                             <label id="home-file-email-toggle-label" class="toggle-label" for="home-file-email-toggle">
                                 <input id="home-file-email-toggle" type="checkbox" role="switch" data-email-toggle data-email-target="home-file-recipient-field" />
                                 <span class="toggle-control" aria-hidden="true"></span>
-                                <span>{{call .T "send_link_email_label"}}</span>{{if not .EmailConfigured}}<span class="email-config-warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>{{call .T "email_not_configured_warning"}}</span>{{end}}
+                                <span>{{call .T "send_link_email_label"}}</span>
                             </label>
+                            {{if not .EmailConfigured}}<span class="email-config-warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>{{call .T "email_not_configured_warning"}}</span>{{end}}
                             <label id="home-file-recipient-field" class="full-field email-recipient-field" for="home-file-recipient-input" hidden>
                                 <span class="sr-label">{{call .T "send_link_email_label"}}</span>
                                 <input id="home-file-recipient-input" type="email" name="recipient_email" autocomplete="email" placeholder="{{call .T "send_link_email_placeholder"}}" />
@@ -475,8 +477,9 @@
                             <label id="home-get-file-email-toggle-label" class="toggle-label" for="home-get-file-email-toggle">
                                 <input id="home-get-file-email-toggle" type="checkbox" role="switch" data-email-toggle data-email-target="home-get-file-recipient-field" />
                                 <span class="toggle-control" aria-hidden="true"></span>
-                                <span>{{call .T "send_link_email_label"}}</span>{{if not .EmailConfigured}}<span class="email-config-warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>{{call .T "email_not_configured_warning"}}</span>{{end}}
+                                <span>{{call .T "send_link_email_label"}}</span>
                             </label>
+                            {{if not .EmailConfigured}}<span class="email-config-warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>{{call .T "email_not_configured_warning"}}</span>{{end}}
                             <label id="home-get-file-recipient-field" class="full-field email-recipient-field" for="home-get-file-recipient-input" hidden>
                                 <span class="sr-label">{{call .T "send_link_email_label"}}</span>
                                 <input id="home-get-file-recipient-input" type="email" name="recipient_email" autocomplete="email" placeholder="{{call .T "send_link_email_placeholder"}}" />
