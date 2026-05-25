@@ -1,7 +1,43 @@
 /* ─── Ephemeral Link — app.js ────────────────────────────────────────────── */
 "use strict";
 
+(() => {
+  const storedTheme = localStorage.getItem("el-theme");
+  const prefersDark = window.matchMedia?.(
+    "(prefers-color-scheme: dark)",
+  ).matches;
+  const theme = storedTheme || (prefersDark ? "dark" : "light");
+  document.documentElement.dataset.theme = theme;
+})();
+
 document.addEventListener("DOMContentLoaded", () => {
+  /* ── Theme toggle ────────────────────────────────────────────────────── */
+  const themeToggles = document.querySelectorAll("[data-theme-toggle]");
+
+  function setTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("el-theme", theme);
+    themeToggles.forEach((toggle) => {
+      const isDark = theme === "dark";
+      toggle.setAttribute("aria-pressed", isDark ? "true" : "false");
+      toggle.classList.toggle("active", isDark);
+      const icon = toggle.querySelector("i");
+      if (icon) {
+        icon.classList.toggle("fa-moon", !isDark);
+        icon.classList.toggle("fa-sun", isDark);
+      }
+    });
+  }
+
+  themeToggles.forEach((toggle) => {
+    toggle.addEventListener("click", () => {
+      const next =
+        document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      setTheme(next);
+    });
+  });
+  setTheme(document.documentElement.dataset.theme || "light");
+
   /* ── Tabs ─────────────────────────────────────────────────────────────── */
   const tabBtns = document.querySelectorAll(".tab-btn[data-tab]");
   const typeInput = document.getElementById("secret-type-input");

@@ -67,6 +67,17 @@
                     {{else}}
                     <a id="home-sign-in-link" href="/login">{{call .T "sign_in"}}</a>
                     {{end}}
+                    <button
+                        id="home-theme-toggle"
+                        class="theme-toggle"
+                        type="button"
+                        aria-label="{{call .T "theme_toggle_label"}}"
+                        aria-pressed="false"
+                        title="{{call .T "theme_toggle_label"}}"
+                        data-theme-toggle
+                    >
+                        <span class="theme-toggle-track" aria-hidden="true"><span class="theme-toggle-thumb"></span></span>
+                    </button>
                     <form
                         id="home-language-form"
                         class="lang"

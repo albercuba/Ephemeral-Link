@@ -45,6 +45,7 @@
   "settings": "Einstellungen",
   "home_label": "Startseite",
   "language_label": "Sprache",
+  "theme_toggle_label": "Dunkelmodus umschalten",
   "secret_type_label": "Art des Geheimnisses",
   "secret_placeholder": "Vertrauliche Nachricht zum Schützen eingeben...",
   "password_placeholder": "Passphrase eintragen",

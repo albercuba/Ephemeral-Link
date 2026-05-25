@@ -45,6 +45,7 @@
   "settings": "Settings",
   "home_label": "Home",
   "language_label": "Language",
+  "theme_toggle_label": "Toggle dark mode",
   "secret_type_label": "Secret type",
   "secret_placeholder": "Type the confidential message to protect...",
   "password_placeholder": "Type passphrase",
