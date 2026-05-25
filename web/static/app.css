@@ -1475,7 +1475,7 @@ textarea,
     align-items: center;
     gap: 0.55rem;
     padding: 0.35rem 0.6rem;
-    background: transparent;
+    background: transparent !important;
     color: #172033;
 }
 
