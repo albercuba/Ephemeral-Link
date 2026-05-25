@@ -762,6 +762,7 @@ textarea,
 
 .el-create-card .tab-panel {
     padding: 2.35rem;
+    position: absolute;
 }
 
 .full-field textarea {
