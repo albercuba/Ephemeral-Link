@@ -1637,8 +1637,16 @@ textarea,
 .email-config-warning-card {
     margin: 0;
     border-width: 1px;
+    border-color: #fed7aa;
     border-radius: var(--radius);
     padding: 0.85rem 1rem;
+    background: #fff7ed;
+}
+
+.email-config-warning-card,
+.email-config-warning-card p,
+.email-config-warning-card .warning-icon {
+    color: #c2410c;
 }
 
 .email-config-warning-card p {
