@@ -732,8 +732,7 @@ func (a *App) favicon(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, a.logoPath())
 		return
 	}
-	w.Header().Set("Content-Type", "image/svg+xml")
-	_, _ = w.Write([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#f97316"/><text x="16" y="23" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="900" fill="#ffffff">E</text></svg>`))
+	http.NotFound(w, r)
 }
 
 func (a *App) securityHeaders(next http.Handler) http.Handler {

@@ -9,11 +9,7 @@
         />
         <meta id="home-meta-robots" name="robots" content="noindex, nofollow" />
         <title id="home-title">{{.Title}}</title>
-        <link
-            id="home-favicon"
-            rel="icon"
-            href="/brand/favicon"
-        />
+        {{if .LogoURL}}<link id="home-favicon" rel="icon" href="/brand/favicon" />{{end}}
         <link
             id="home-share-tech-mono-font"
             rel="stylesheet"

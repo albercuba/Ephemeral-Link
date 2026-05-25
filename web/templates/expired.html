@@ -8,7 +8,7 @@
             content="width=device-width,initial-scale=1"
         />
         <title id="expired-title">{{.Title}}</title>
-  <link rel="icon" href="/brand/favicon">
+  {{if .LogoURL}}<link rel="icon" href="/brand/favicon">{{end}}
         <link
             id="expired-share-tech-mono-font"
             rel="stylesheet"

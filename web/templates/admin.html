@@ -4,7 +4,7 @@
   <meta id="admin-meta-charset" charset="utf-8">
   <meta id="admin-meta-viewport" name="viewport" content="width=device-width,initial-scale=1">
   <title id="admin-title">{{.Title}}</title>
-  <link rel="icon" href="/brand/favicon">
+  {{if .LogoURL}}<link rel="icon" href="/brand/favicon">{{end}}
   <link id="admin-share-tech-mono-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap">
   <link id="admin-font-awesome" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link id="admin-stylesheet" rel="stylesheet" href="/static/app.css">

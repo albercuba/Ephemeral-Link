@@ -5,7 +5,7 @@
   <meta id="error-meta-viewport" name="viewport" content="width=device-width,initial-scale=1">
   <meta id="error-meta-robots" name="robots" content="noindex, nofollow">
   <title id="error-title">{{.Title}}</title>
-  <link rel="icon" href="/brand/favicon">
+  {{if .LogoURL}}<link rel="icon" href="/brand/favicon">{{end}}
   <link id="error-stylesheet" rel="stylesheet" href="/static/app.css">
 </head>
 <body id="error-body">
