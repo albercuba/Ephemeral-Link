@@ -60,6 +60,83 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  /* ── Enhanced select dropdowns ───────────────────────────────────────── */
+  document.querySelectorAll("select").forEach((select) => {
+    if (select.closest(".lang") || select.dataset.enhancedSelect === "true") {
+      return;
+    }
+
+    select.dataset.enhancedSelect = "true";
+    select.classList.add("enhanced-select-native");
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "enhanced-select";
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "enhanced-select-toggle";
+    toggle.setAttribute("aria-haspopup", "listbox");
+    toggle.setAttribute("aria-expanded", "false");
+
+    const menu = document.createElement("div");
+    menu.className = "enhanced-select-menu";
+    menu.setAttribute("role", "listbox");
+    menu.hidden = true;
+
+    const selectedLabel = () =>
+      select.options[select.selectedIndex]?.textContent?.trim() || "";
+
+    const setOpen = (open) => {
+      wrapper.classList.toggle("open", open);
+      menu.hidden = !open;
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    };
+
+    const refresh = () => {
+      toggle.textContent = selectedLabel();
+      menu.querySelectorAll("button[data-value]").forEach((button) => {
+        button.setAttribute(
+          "aria-selected",
+          button.dataset.value === select.value ? "true" : "false",
+        );
+      });
+    };
+
+    Array.from(select.options).forEach((option) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.dataset.value = option.value;
+      item.textContent = option.textContent;
+      item.setAttribute("role", "option");
+      item.addEventListener("click", () => {
+        select.value = option.value;
+        refresh();
+        setOpen(false);
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      menu.appendChild(item);
+    });
+
+    toggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setOpen(menu.hidden);
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!wrapper.contains(event.target)) setOpen(false);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") setOpen(false);
+    });
+
+    select.parentNode.insertBefore(wrapper, select);
+    wrapper.appendChild(select);
+    wrapper.appendChild(toggle);
+    wrapper.appendChild(menu);
+    refresh();
+  });
+
   /* ── Admin section menu ──────────────────────────────────────────────── */
   const adminMenuButtons = document.querySelectorAll("[data-admin-tab]");
   const adminPanels = document.querySelectorAll("[data-admin-panel]");

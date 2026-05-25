@@ -186,12 +186,8 @@ textarea {
 select {
     appearance: none;
     -webkit-appearance: none;
-    min-width: 3rem;
-    overflow: hidden;
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    background-color: var(--card);
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
     padding-right: 2.5rem;
     background-image:
         linear-gradient(45deg, transparent 50%, var(--muted) 50%),
@@ -206,9 +202,90 @@ select {
 }
 
 option {
-    border-radius: var(--radius);
     background: var(--card);
     color: var(--text);
+}
+
+.enhanced-select {
+    position: relative;
+    width: 100%;
+}
+
+.enhanced-select-native {
+    display: none;
+}
+
+.enhanced-select-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 3.05rem;
+    padding: 0.75rem 2.5rem 0.75rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background-color: color-mix(in srgb, var(--card) 88%, transparent);
+    color: var(--text);
+    text-align: left;
+    font-weight: 750;
+}
+
+.enhanced-select-toggle:hover,
+.enhanced-select-toggle:focus-visible,
+.enhanced-select.open .enhanced-select-toggle {
+    border-color: var(--el-orange, var(--accent));
+    filter: none;
+    transform: none;
+}
+
+.enhanced-select-toggle::after {
+    position: absolute;
+    right: 1rem;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-right: 2px solid var(--muted);
+    border-bottom: 2px solid var(--muted);
+    content: "";
+    transform: rotate(45deg) translateY(-0.15rem);
+}
+
+.enhanced-select-menu {
+    position: absolute;
+    top: calc(100%);
+    right: 0;
+    left: 0;
+    z-index: 20;
+    display: grid;
+    min-width: 3rem;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--card);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+}
+
+.enhanced-select-menu[hidden] {
+    display: none;
+}
+
+.enhanced-select-menu button {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    font-weight: 800;
+}
+
+.enhanced-select-menu button:hover,
+.enhanced-select-menu button:focus-visible,
+.enhanced-select-menu button[aria-selected="true"] {
+    background: #fff7ed;
+    color: var(--el-orange, var(--accent));
+    filter: none;
+    transform: none;
 }
 
 select:focus,
