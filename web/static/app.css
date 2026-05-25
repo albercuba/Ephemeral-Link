@@ -257,7 +257,8 @@ option {
     z-index: 20;
     display: grid;
     min-width: 3rem;
-    overflow: hidden;
+    max-height: min(18rem, 50vh);
+    overflow-y: auto;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--card);
@@ -348,7 +349,7 @@ textarea:focus {
     max-width: 760px;
     margin: 0 auto;
     padding: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .tabs {
@@ -762,7 +763,6 @@ textarea,
 
 .el-create-card .tab-panel {
     padding: 2.35rem;
-    position: absolute;
 }
 
 .full-field textarea {
