@@ -1742,7 +1742,6 @@ html[data-theme="dark"] .admin-menu-button.active {
     border-color: var(--el-orange-2);
     background: rgba(255, 159, 10, 0.16);
     color: #fdba74;
-    box-shadow: inset 0.25rem 0 0 var(--el-orange-2);
 }
 
 html[data-theme="dark"] .enhanced-select-menu button[aria-selected="true"] {
