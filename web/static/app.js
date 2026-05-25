@@ -60,6 +60,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  /* ── Mutually exclusive email delivery settings ──────────────────────── */
+  document
+    .querySelectorAll("[data-exclusive-email-toggle]")
+    .forEach((toggle) => {
+      toggle.addEventListener("change", () => {
+        if (!toggle.checked) return;
+        const other = toggle.form?.elements.namedItem(
+          toggle.dataset.exclusiveEmailToggle || "",
+        );
+        if (other instanceof HTMLInputElement) other.checked = false;
+      });
+    });
+
   /* ── Enhanced select dropdowns ───────────────────────────────────────── */
   document.querySelectorAll("select").forEach((select) => {
     if (select.closest(".lang") || select.dataset.enhancedSelect === "true") {

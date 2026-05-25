@@ -622,6 +622,10 @@ func (a *App) adminSaveIntegrations(w http.ResponseWriter, r *http.Request) {
 		cfg.ADBindDN = strings.TrimSpace(r.FormValue("ad_bind_dn"))
 	case "email":
 		cfg.SMTPEnabled = r.FormValue("smtp_enabled") == "on"
+		cfg.GraphEnabled = r.FormValue("graph_enabled") == "on"
+		if cfg.SMTPEnabled && cfg.GraphEnabled {
+			cfg.GraphEnabled = false
+		}
 		cfg.SMTPHost = strings.TrimSpace(r.FormValue("smtp_host"))
 		cfg.SMTPPort = strings.TrimSpace(r.FormValue("smtp_port"))
 		cfg.SMTPUsername = strings.TrimSpace(r.FormValue("smtp_username"))
@@ -629,7 +633,6 @@ func (a *App) adminSaveIntegrations(w http.ResponseWriter, r *http.Request) {
 			cfg.SMTPPassword = v
 		}
 		cfg.SMTPFrom = strings.TrimSpace(r.FormValue("smtp_from"))
-		cfg.GraphEnabled = r.FormValue("graph_enabled") == "on"
 		cfg.GraphTenantID = strings.TrimSpace(r.FormValue("graph_tenant_id"))
 		cfg.GraphClientID = strings.TrimSpace(r.FormValue("graph_client_id"))
 		if v := r.FormValue("graph_client_secret"); v != "" {
