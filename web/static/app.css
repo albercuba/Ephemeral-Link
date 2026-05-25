@@ -100,22 +100,24 @@ textarea {
 }
 
 .lang {
-    position: relative;
     display: inline-flex;
     align-items: center;
+    gap: 0.55rem;
+    border: 0;
 }
 
 .lang .fa-language {
-    position: absolute;
-    left: 0.7rem;
-    z-index: 1;
     color: var(--muted);
+    font-size: 1.35rem;
+    line-height: 1;
     pointer-events: none;
 }
 
 .lang select {
     width: auto;
-    padding: 0.45rem 2rem 0.45rem 2rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.45rem 2rem 0.45rem 0.75rem;
 }
 
 select {
