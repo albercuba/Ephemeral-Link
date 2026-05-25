@@ -47,6 +47,8 @@ type Page struct {
 	ExpiresAt                                                                                   string
 	HasPassphrase                                                                               bool
 	EmailConfigured                                                                             bool
+	MicrosoftLoginEnabled                                                                       bool
+	ADLoginEnabled                                                                              bool
 	User                                                                                        *redisstore.User
 	Users                                                                                       []redisstore.User
 	Items                                                                                       []redisstore.Item
@@ -704,6 +706,8 @@ func (a *App) render(w http.ResponseWriter, r *http.Request, status int, name st
 	}
 	if cfg, err := a.store.GetIntegrationConfig(r.Context()); err == nil {
 		p.EmailConfigured = cfg.SMTPEnabled || cfg.GraphEnabled
+		p.MicrosoftLoginEnabled = cfg.MicrosoftEnabled && cfg.MicrosoftTenantID != "" && cfg.MicrosoftClientID != "" && cfg.MicrosoftAudience != ""
+		p.ADLoginEnabled = cfg.ADEnabled && cfg.ADHost != "" && cfg.ADBaseDN != ""
 	}
 	w.WriteHeader(status)
 	if err := a.templates.ExecuteTemplate(w, name, p); err != nil {

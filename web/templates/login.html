@@ -8,7 +8,7 @@
   <link id="login-share-tech-mono-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap">
   <link id="login-font-awesome" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link id="login-stylesheet" rel="stylesheet" href="/static/app.css">
-  <script id="login-msal-script" src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+  {{if .MicrosoftLoginEnabled}}<script id="login-msal-script" src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>{{end}}
 </head>
 <body id="login-body">
 <main id="login-main" class="page narrow auth-page">
@@ -28,14 +28,16 @@
         <button id="login-submit-button" type="submit">{{call .T "sign_in"}}</button>
       </form>
     </section>
+    {{if or .MicrosoftLoginEnabled .ADLoginEnabled}}
     <section id="login-actions-panel" class="created-actions-panel auth-provider-actions">
-      <a id="login-microsoft-button" class="auth-provider-button" href="/auth/microsoft"><i class="fa-brands fa-microsoft" aria-hidden="true"></i> {{call .T "sign_in_microsoft"}}</a>
-      <a id="login-ad-button" class="auth-provider-button" href="/auth/ad"><i class="fa-solid fa-server" aria-hidden="true"></i> {{call .T "sign_in_local_ad"}}</a>
+      {{if .MicrosoftLoginEnabled}}<a id="login-microsoft-button" class="auth-provider-button" href="/auth/microsoft"><i class="fa-brands fa-microsoft" aria-hidden="true"></i> {{call .T "sign_in_microsoft"}}</a>{{end}}
+      {{if .ADLoginEnabled}}<a id="login-ad-button" class="auth-provider-button" href="/auth/ad"><i class="fa-solid fa-server" aria-hidden="true"></i> {{call .T "sign_in_local_ad"}}</a>{{end}}
     </section>
+    {{end}}
   </article>
 </main>
 <script id="login-form-helper" src="/static/login-form.js" defer></script>
-<script id="login-microsoft-msal-flow" src="/static/login-msal.js" defer></script>
+{{if .MicrosoftLoginEnabled}}<script id="login-microsoft-msal-flow" src="/static/login-msal.js" defer></script>{{end}}
 {{template "footer" .}}
 </body>
 </html>
