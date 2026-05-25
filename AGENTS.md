@@ -67,6 +67,14 @@ When suggesting improvements:
 - Prefer actionable commit-style follow-up titles, for example `fix: evict expired rate limit buckets`.
 - Avoid overwhelming the user with unrelated audit items; surface only the highest-value recommendations tied to the current change.
 
+## Commit messages
+
+Whenever code, documentation, configuration, templates, locales, or assets are changed, include a suggested GitHub commit message in the final response.
+
+- Use Conventional Commits format, for example `fix: update email recipient toggle` or `docs: add production deployment checklist`.
+- Keep the message concise and specific to the completed change.
+- Do not create a commit unless explicitly asked.
+
 ## Validation
 
 Run the most relevant checks before finishing changes:

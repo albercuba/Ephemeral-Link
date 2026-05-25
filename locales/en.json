@@ -219,7 +219,7 @@
   "setup_create_admin": "Create administrator",
   "setup_invalid": "Enter a username, matching passwords, and a password with at least 12 characters.",
   "setup_unavailable": "Setup is no longer available because an administrator already exists or another setup is in progress.",
-  "send_link_email_label": "Email link to recipient (optional)",
+  "send_link_email_label": "Email link to recipient",
   "send_link_email_placeholder": "recipient@example.com",
   "created_link_email_subject": "Secure link from Ephemeral Link",
   "created_link_email_body": "%s shared a secure %s link with you: %s",

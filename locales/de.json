@@ -219,7 +219,7 @@
   "setup_create_admin": "Administrator erstellen",
   "setup_invalid": "Gib einen Benutzernamen, übereinstimmende Passwörter und ein Passwort mit mindestens 12 Zeichen ein.",
   "setup_unavailable": "Die Einrichtung ist nicht mehr verfügbar, weil bereits ein Administrator existiert oder eine andere Einrichtung läuft.",
-  "send_link_email_label": "Link per E-Mail an Empfänger senden (optional)",
+  "send_link_email_label": "Link per E-Mail an Empfänger senden",
   "send_link_email_placeholder": "empfaenger@example.com",
   "created_link_email_subject": "Sicherer Link von Ephemeral Link",
   "created_link_email_body": "%s hat einen sicheren %s-Link mit dir geteilt: %s",

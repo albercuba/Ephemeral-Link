@@ -528,20 +528,6 @@ textarea,
     letter-spacing: 0;
 }
 
-.brand-mark {
-    display: grid;
-    place-items: center;
-    width: 2.65rem;
-    height: 2.65rem;
-    border-radius: var(--radius);
-    background: var(--el-orange);
-    color: #ffffff;
-    font-family: ui-sans-serif, system-ui, sans-serif;
-    font-size: 1.65rem;
-    font-weight: 900;
-    line-height: 1;
-}
-
 .brand-copy {
     display: grid;
     gap: 0.05rem;
@@ -1481,6 +1467,73 @@ textarea,
 
 .admin-card-body {
     padding: 1.25rem 1.55rem;
+}
+
+.email-option {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: fit-content;
+    cursor: pointer;
+    color: #172033;
+    font-weight: 900;
+}
+
+.toggle-label input[type="checkbox"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.toggle-control {
+    position: relative;
+    width: 2.85rem;
+    height: 1.55rem;
+    flex: 0 0 auto;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    background: #e2e8f0;
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease;
+}
+
+.toggle-control::after {
+    position: absolute;
+    top: 0.17rem;
+    left: 0.17rem;
+    width: 1.05rem;
+    height: 1.05rem;
+    border-radius: 999px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+    content: "";
+    transition: transform 0.18s ease;
+}
+
+.toggle-label input[type="checkbox"]:checked + .toggle-control {
+    border-color: var(--el-orange-2);
+    background: var(--el-orange);
+}
+
+.toggle-label input[type="checkbox"]:checked + .toggle-control::after {
+    transform: translateX(1.3rem);
+}
+
+.toggle-label input[type="checkbox"]:focus-visible + .toggle-control {
+    outline: 3px solid rgba(234, 88, 12, 0.24);
+    outline-offset: 2px;
+}
+
+.email-recipient-field[hidden] {
+    display: none;
 }
 
 .checkbox-label {

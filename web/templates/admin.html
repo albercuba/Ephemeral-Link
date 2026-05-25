@@ -13,7 +13,7 @@
 <body id="admin-body">
 <main id="admin-main" class="page admin-page">
   <nav id="admin-nav" class="nav el-nav">
-    <a id="admin-brand-link" class="brand el-brand" href="/">{{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call $.T "app_name"}}">{{else}}<span id="admin-brand-mark" class="brand-mark">E</span>{{end}}<span class="brand-copy"><strong>{{call $.T "app_name"}}</strong></span></a>
+    <a id="admin-brand-link" class="brand el-brand" href="/">{{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call $.T "app_name"}}">{{end}}<span class="brand-copy"><strong>{{call $.T "app_name"}}</strong></span></a>
     <div id="admin-nav-actions" class="nav-actions"><span id="admin-disk-badge" class="disk-badge"><i class="fa-solid fa-hard-drive" aria-hidden="true"></i><span><strong>{{.Disk.Available}}</strong><small>{{call $.T "disk_available_of"}} {{.Disk.Total}} · {{.Disk.UsedPercent}} {{call $.T "disk_used"}}</small></span></span><span id="admin-current-user" class="user-badge"><span class="user-badge-avatar">{{if .User.FirstName}}{{printf "%.1s" .User.FirstName}}{{else}}{{printf "%.1s" .User.Username}}{{end}}</span><span class="user-badge-copy"><strong>{{if .User.FirstName}}{{.User.FirstName}} {{.User.LastName}}{{else}}{{.User.Username}}{{end}}</strong><small>{{.User.Role}}</small></span></span><a id="admin-home-link" href="/">{{call $.T "home_label"}}</a><form id="admin-logout-form" class="logout-form" method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">{{call $.T "sign_out"}}</button></form></div>
   </nav>
   {{if .Message}}<div id="admin-saved-alert" class="alert success admin-saved-alert">{{.Message}}</div>{{end}}

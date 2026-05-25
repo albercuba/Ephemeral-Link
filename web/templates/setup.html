@@ -11,7 +11,7 @@
 </head>
 <body id="setup-body">
 <main id="setup-main" class="page narrow auth-page">
-  <a id="setup-brand-link" class="brand el-brand" href="/setup">{{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call .T "app_name"}}">{{else}}<span id="setup-brand-mark" class="brand-mark">E</span>{{end}}<span id="setup-brand-copy" class="brand-copy"><strong>{{call .T "app_name"}}</strong></span></a>
+  <a id="setup-brand-link" class="brand el-brand" href="/setup">{{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call .T "app_name"}}">{{end}}<span id="setup-brand-copy" class="brand-copy"><strong>{{call .T "app_name"}}</strong></span></a>
   <article id="setup-card" class="created-card auth-card">
     <section id="setup-status-panel" class="created-status-panel auth-card-panel">
       <h1 id="setup-heading">{{call .T "setup_title"}}</h1>

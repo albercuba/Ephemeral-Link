@@ -31,7 +31,7 @@
         <main id="home-main" class="page el-page">
             <nav id="home-nav" class="nav el-nav">
                 <a id="home-brand-link" class="brand el-brand" href="/">
-                    {{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call .T "app_name"}}">{{else}}<span id="home-brand-mark" class="brand-mark">E</span>{{end}}
+                    {{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call .T "app_name"}}">{{end}}
                     <span id="home-brand-copy" class="brand-copy"
                         ><strong id="home-brand-name"
                             >{{call .T "app_name"}}</strong
@@ -265,10 +265,17 @@
                                 </select>
                             </label>
                         </div>
-                        <label id="home-text-recipient-label" class="full-field" for="home-text-recipient-input">
-                            {{call .T "send_link_email_label"}}
-                            <input id="home-text-recipient-input" type="email" name="recipient_email" autocomplete="email" placeholder="{{call .T "send_link_email_placeholder"}}" />
-                        </label>
+                        <div id="home-text-email-option" class="email-option">
+                            <label id="home-text-email-toggle-label" class="toggle-label" for="home-text-email-toggle">
+                                <input id="home-text-email-toggle" type="checkbox" role="switch" data-email-toggle data-email-target="home-text-recipient-field" />
+                                <span class="toggle-control" aria-hidden="true"></span>
+                                <span>{{call .T "send_link_email_label"}}</span>
+                            </label>
+                            <label id="home-text-recipient-field" class="full-field email-recipient-field" for="home-text-recipient-input" hidden>
+                                <span class="sr-label">{{call .T "send_link_email_label"}}</span>
+                                <input id="home-text-recipient-input" type="email" name="recipient_email" autocomplete="email" placeholder="{{call .T "send_link_email_placeholder"}}" />
+                            </label>
+                        </div>
                         <article
                             id="home-text-warning-card"
                             class="warning-card"
@@ -407,10 +414,17 @@
                                 </select>
                             </label>
                         </div>
-                        <label id="home-file-recipient-label" class="full-field" for="home-file-recipient-input">
-                            {{call .T "send_link_email_label"}}
-                            <input id="home-file-recipient-input" type="email" name="recipient_email" autocomplete="email" placeholder="{{call .T "send_link_email_placeholder"}}" />
-                        </label>
+                        <div id="home-file-email-option" class="email-option">
+                            <label id="home-file-email-toggle-label" class="toggle-label" for="home-file-email-toggle">
+                                <input id="home-file-email-toggle" type="checkbox" role="switch" data-email-toggle data-email-target="home-file-recipient-field" />
+                                <span class="toggle-control" aria-hidden="true"></span>
+                                <span>{{call .T "send_link_email_label"}}</span>
+                            </label>
+                            <label id="home-file-recipient-field" class="full-field email-recipient-field" for="home-file-recipient-input" hidden>
+                                <span class="sr-label">{{call .T "send_link_email_label"}}</span>
+                                <input id="home-file-recipient-input" type="email" name="recipient_email" autocomplete="email" placeholder="{{call .T "send_link_email_placeholder"}}" />
+                            </label>
+                        </div>
                         <article
                             id="home-file-warning-card"
                             class="warning-card"
@@ -444,12 +458,23 @@
                     aria-labelledby="home-tab-get-file"
                     hidden
                 >
-                    <form method="post" action="/upload-requests">
-                        <input type="hidden" name="csrf" value="{{.CSRF}}" />
-                        <h2>{{call .T "request_upload_title"}}</h2>
-                        <p>{{call .T "request_upload_desc"}}</p>
-                        <input type="hidden" name="delivery" value="link">
-                        <label>{{call .T "expires_label"}}<select name="ttl">{{range .TTLs}}<option value="{{.Seconds}}">{{.Label}}</option>{{end}}</select></label>
+                    <form id="home-get-file-form" method="post" action="/upload-requests">
+                        <input id="home-get-file-csrf" type="hidden" name="csrf" value="{{.CSRF}}" />
+                        <h2 id="home-get-file-title">{{call .T "request_upload_title"}}</h2>
+                        <p id="home-get-file-desc">{{call .T "request_upload_desc"}}</p>
+                        <input id="home-get-file-delivery" type="hidden" name="delivery" value="link" data-email-delivery>
+                        <label id="home-get-file-ttl-label" for="home-get-file-ttl-select">{{call .T "expires_label"}}<select id="home-get-file-ttl-select" name="ttl">{{range .TTLs}}<option value="{{.Seconds}}">{{.Label}}</option>{{end}}</select></label>
+                        <div id="home-get-file-email-option" class="email-option">
+                            <label id="home-get-file-email-toggle-label" class="toggle-label" for="home-get-file-email-toggle">
+                                                            <input id="home-get-file-email-toggle" type="checkbox" role="switch" data-email-toggle data-email-target="home-get-file-recipient-field" />
+                                                            <span class="toggle-control" aria-hidden="true"></span>
+                                                            <span>{{call .T "send_link_email_label"}}</span>
+                                                        </label>
+                            <label id="home-get-file-recipient-field" class="full-field email-recipient-field" for="home-get-file-recipient-input" hidden>
+                                <span class="sr-label">{{call .T "send_link_email_label"}}</span>
+                                <input id="home-get-file-recipient-input" type="email" name="recipient_email" autocomplete="email" placeholder="{{call .T "send_link_email_placeholder"}}" />
+                            </label>
+                        </div>
                         <article class="warning-card" aria-label="{{call .T "warning_label"}}">
                             <i class="fa-solid fa-circle-exclamation warning-icon" aria-hidden="true"></i>
                             <p>{{call .T "one_time_warning"}}</p>

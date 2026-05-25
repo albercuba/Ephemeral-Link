@@ -12,7 +12,7 @@
 </head>
 <body id="login-body">
 <main id="login-main" class="page narrow auth-page">
-  <a id="login-brand-link" class="brand el-brand" href="/login">{{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call .T "app_name"}}">{{else}}<span id="login-brand-mark" class="brand-mark">E</span>{{end}}<span id="login-brand-copy" class="brand-copy"><strong>{{call .T "app_name"}}</strong></span></a>
+  <a id="login-brand-link" class="brand el-brand" href="/login">{{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call .T "app_name"}}">{{end}}<span id="login-brand-copy" class="brand-copy"><strong>{{call .T "app_name"}}</strong></span></a>
   <article id="login-card" class="created-card auth-card">
     <section id="login-status-panel" class="created-status-panel auth-card-panel">
       <h1 id="login-heading">{{call .T "sign_in"}}</h1>

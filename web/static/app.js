@@ -124,6 +124,29 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  /* ── Email link toggle ───────────────────────────────────────────────── */
+  document.querySelectorAll("[data-email-toggle]").forEach((toggle) => {
+    const field = document.getElementById(toggle.dataset.emailTarget || "");
+    const input = field?.querySelector('input[name="recipient_email"]');
+    const delivery = toggle
+      .closest("form")
+      ?.querySelector("[data-email-delivery]");
+
+    const update = () => {
+      const enabled = toggle.checked;
+      if (field) field.hidden = !enabled;
+      if (input) {
+        input.required = enabled;
+        if (!enabled) input.value = "";
+        else input.focus();
+      }
+      if (delivery) delivery.value = enabled ? "email" : "link";
+    };
+
+    toggle.addEventListener("change", update);
+    update();
+  });
+
   /* ── Passphrase visibility reveal ────────────────────────────────────── */
   document.querySelectorAll("#pp-reveal").forEach((btn) => {
     btn.addEventListener("click", () => {
