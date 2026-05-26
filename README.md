@@ -16,6 +16,7 @@ Ephemeral Link is a lightweight, Go-based “burn after reading” web app for s
 - Redis TTL expiry and atomic claim script for single-use access
 - Local encrypted file storage outside the web root
 - English and German UI translations
+- Browser language detection with English fallback
 - Language cookie and language switcher
 - Rate limiting, CSRF checks, request size limits, and secure HTTP headers
 - Docker Compose deployment with Valkey
@@ -170,6 +171,10 @@ Minimum production requirements:
 ## Visual assets
 
 The UI uses the Google Font `Share Tech Mono`, which is distributed under the SIL Open Font License. Icons are loaded from Font Awesome Free. Font Awesome Free uses mixed licensing: icons are CC BY 4.0, fonts are SIL OFL 1.1, and code is MIT. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Language behavior
+
+On the first visit, Ephemeral Link checks the browser `Accept-Language` header and uses the first supported language. With the default languages, German browsers receive the German UI and unsupported browser languages fall back to English. If a user changes the language in the UI, the app stores that choice in the `lang` cookie and uses it on later requests.
 
 ## Adding another language
 

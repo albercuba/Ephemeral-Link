@@ -718,7 +718,7 @@ func (a *App) lang(r *http.Request) string {
 	if c, err := r.Cookie("lang"); err == nil {
 		return a.i18n.Normalize(c.Value)
 	}
-	return a.cfg.DefaultLanguage
+	return a.i18n.Match(r.Header.Get("Accept-Language"))
 }
 func (a *App) t(r *http.Request, k string) string { return a.i18n.T(a.lang(r), k) }
 func (a *App) bad(w http.ResponseWriter, r *http.Request, err error) {
