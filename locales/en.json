@@ -243,7 +243,7 @@
   "analytics_active_storage": "Active encrypted file storage",
   "admin_analytics_privacy_note": "Analytics are aggregated from metadata and audit event types only; plaintext secrets, file contents, passphrases, tokens, and generated links are not stored here.",
   "footer_copyright": "© 2026 Ephemeral Link. All rights reserved.",
-  "created_email_sent": "The link email was sent. Copy the link here too if you want a backup.",
+  "created_email_sent": "The link email was submitted for delivery. Copy the link here too if you want a backup.",
   "created_email_failed": "The link was created, but email delivery failed. Copy and send the link manually.",
   "audit_filter_event": "Event",
   "audit_filter_result": "Result",

@@ -123,7 +123,7 @@ func graphToken(ctx context.Context, client graphHTTPClient, cfg redisstore.Inte
 	defer res.Body.Close()
 	data, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return "", fmt.Errorf("Graph token request failed with status %d", res.StatusCode)
+		return "", fmt.Errorf("Graph token request failed with status %d: %s", res.StatusCode, safeGraphError(data))
 	}
 	var parsed struct {
 		AccessToken string `json:"access_token"`
@@ -155,11 +155,22 @@ func graphSendMail(ctx context.Context, client graphHTTPClient, sender, token, t
 		return err
 	}
 	defer res.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 1<<20))
+	data, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return fmt.Errorf("Graph sendMail failed with status %d", res.StatusCode)
+		return fmt.Errorf("Graph sendMail failed with status %d: %s", res.StatusCode, safeGraphError(data))
 	}
 	return nil
+}
+
+func safeGraphError(data []byte) string {
+	text := strings.TrimSpace(string(data))
+	if text == "" {
+		return "empty response body"
+	}
+	if len(text) > 500 {
+		return text[:500]
+	}
+	return text
 }
 
 func sanitizeHeader(v string) string { return strings.NewReplacer("\r", " ", "\n", " ").Replace(v) }
