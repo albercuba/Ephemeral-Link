@@ -111,6 +111,8 @@
   "save_email_settings": "E-Mail-Einstellungen speichern",
   "leave_blank_keep_password": "Leer lassen, um das vorhandene Passwort beizubehalten",
   "leave_blank_keep_secret": "Leer lassen, damit das aktuelle Geheimnis erhalten bleibt",
+  "graph_secret_saved": "Ein Graph-Client-Geheimnis ist gespeichert. Lasse dieses Feld leer, um es beizubehalten, oder trage einen neuen Wert ein, um es zu ersetzen.",
+  "graph_secret_missing": "Es ist noch kein Graph-Client-Geheimnis gespeichert. Füge den Geheimniswert aus Microsoft Entra ein, bevor du Graph sendMail aktivierst.",
   "username_label": "Benutzername",
   "first_name_label": "Vorname",
   "last_name_label": "Nachname",

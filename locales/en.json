@@ -111,6 +111,8 @@
   "save_email_settings": "Save email settings",
   "leave_blank_keep_password": "Leave blank to keep existing password",
   "leave_blank_keep_secret": "Keep the current secret if this is empty",
+  "graph_secret_saved": "A Graph client secret is saved. Leave this field blank to keep it, or enter a new value to replace it.",
+  "graph_secret_missing": "No Graph client secret is saved yet. Paste the secret value from Microsoft Entra before enabling Graph sendMail.",
   "username_label": "Username",
   "first_name_label": "First name",
   "last_name_label": "Last name",
