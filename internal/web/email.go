@@ -155,9 +155,9 @@ func graphSendMail(ctx context.Context, client graphHTTPClient, sender, token, t
 		return err
 	}
 	defer res.Body.Close()
-	data, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
+	responseData, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return fmt.Errorf("Graph sendMail failed with status %d: %s", res.StatusCode, safeGraphError(data))
+		return fmt.Errorf("Graph sendMail failed with status %d: %s", res.StatusCode, safeGraphError(responseData))
 	}
 	return nil
 }
