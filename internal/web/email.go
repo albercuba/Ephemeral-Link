@@ -37,9 +37,20 @@ func (a *App) sendUploadNotificationEmail(ctx context.Context, lang, to, link st
 
 func (a *App) sendCreatedLinkEmail(ctx context.Context, lang, to, link, creatorName, kind string) error {
 	lang = a.i18n.Normalize(lang)
-	subject := strings.TrimSpace(creatorName) + " shared a secret link with you."
-	plain := fmt.Sprintf(a.i18n.T(lang, "created_link_email_body"), creatorName, kind, link) + "\n\n" + a.i18n.T(lang, "link_security_note")
-	htmlBody := createdLinkHTML(creatorName, kind, link, a.i18n.T(lang, "link_security_note"))
+	localizedKind := a.i18n.T(lang, "email_kind_"+kind)
+	subject := fmt.Sprintf(a.i18n.T(lang, "created_link_email_subject_named"), strings.TrimSpace(creatorName))
+	plain := fmt.Sprintf(a.i18n.T(lang, "created_link_email_body"), creatorName, localizedKind, link) + "\n\n" + a.i18n.T(lang, "link_security_note")
+	htmlBody := createdLinkHTML(createdLinkEmailView{
+		CreatorName: creatorName,
+		Kind: localizedKind,
+		Link: link,
+		SecurityNote: a.i18n.T(lang, "link_security_note"),
+		Heading: a.i18n.T(lang, "created_link_email_heading"),
+		Intro: fmt.Sprintf(a.i18n.T(lang, "created_link_email_intro"), creatorName, localizedKind),
+		Description: a.i18n.T(lang, "created_link_email_description"),
+		Button: a.i18n.T(lang, "created_link_email_button"),
+		Fallback: a.i18n.T(lang, "created_link_email_fallback"),
+	})
 	return a.sendEmailContent(ctx, to, subject, emailContent{Plain: plain, HTML: htmlBody})
 }
 
@@ -194,18 +205,32 @@ func buildMIMEMessage(from, to, subject string, content emailContent) []byte {
 	return msg.Bytes()
 }
 
-func createdLinkHTML(creatorName, kind, link, securityNote string) string {
-	creator := html.EscapeString(strings.TrimSpace(creatorName))
-	if creator == "" { creator = "Someone" }
-	kind = html.EscapeString(strings.TrimSpace(kind))
-	linkEscaped := html.EscapeString(link)
-	note := html.EscapeString(securityNote)
+type createdLinkEmailView struct {
+	CreatorName string
+	Kind string
+	Link string
+	SecurityNote string
+	Heading string
+	Intro string
+	Description string
+	Button string
+	Fallback string
+}
+
+func createdLinkHTML(view createdLinkEmailView) string {
+	linkEscaped := html.EscapeString(view.Link)
+	note := html.EscapeString(view.SecurityNote)
+	heading := html.EscapeString(view.Heading)
+	intro := html.EscapeString(view.Intro)
+	description := html.EscapeString(view.Description)
+	button := html.EscapeString(view.Button)
+	fallback := html.EscapeString(view.Fallback)
 	return `<!doctype html>
 <html><body style="margin:0;background:#f6f8fb;font-family:Arial,sans-serif;color:#172033;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f8fb;padding:32px 16px;"><tr><td align="center">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border:1px solid #dfe7ef;border-radius:18px;overflow:hidden;box-shadow:0 20px 50px rgba(15,23,42,.08);">
-      <tr><td style="background:linear-gradient(135deg,#f97316,#ffb020);padding:26px 30px;color:#111827;"><div style="font-size:13px;text-transform:uppercase;letter-spacing:.14em;font-weight:700;">Ephemeral Link</div><h1 style="margin:8px 0 0;font-size:26px;line-height:1.2;">A secure link was shared with you</h1></td></tr>
-      <tr><td style="padding:30px;"><p style="font-size:16px;line-height:1.6;margin:0 0 18px;">` + creator + ` shared a secure ` + kind + ` link with you.</p><p style="font-size:14px;line-height:1.6;color:#42536a;margin:0 0 24px;">This is a single-use secure link. Open it only when you are ready to view or download the content.</p><p style="text-align:center;margin:28px 0;"><a href="` + linkEscaped + `" style="display:inline-block;background:#f97316;color:#111827;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:12px;">Open secure link</a></p><p style="font-size:13px;line-height:1.6;color:#64748b;margin:0 0 10px;">If the button does not work, copy and paste this URL into your browser:</p><p style="font-size:13px;line-height:1.6;word-break:break-all;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin:0 0 22px;"><a href="` + linkEscaped + `" style="color:#c2410c;">` + linkEscaped + `</a></p><div style="border-top:1px solid #e2e8f0;padding-top:18px;color:#64748b;font-size:13px;line-height:1.6;">` + note + `</div></td></tr>
+      <tr><td style="background:linear-gradient(135deg,#f97316,#ffb020);padding:26px 30px;color:#111827;"><div style="font-size:13px;text-transform:uppercase;letter-spacing:.14em;font-weight:700;">Ephemeral Link</div><h1 style="margin:8px 0 0;font-size:26px;line-height:1.2;">` + heading + `</h1></td></tr>
+      <tr><td style="padding:30px;"><p style="font-size:16px;line-height:1.6;margin:0 0 18px;">` + intro + `</p><p style="font-size:14px;line-height:1.6;color:#42536a;margin:0 0 24px;">` + description + `</p><p style="text-align:center;margin:28px 0;"><a href="` + linkEscaped + `" style="display:inline-block;background:#f97316;color:#111827;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:12px;">` + button + `</a></p><p style="font-size:13px;line-height:1.6;color:#64748b;margin:0 0 10px;">` + fallback + `</p><p style="font-size:13px;line-height:1.6;word-break:break-all;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin:0 0 22px;"><a href="` + linkEscaped + `" style="color:#c2410c;">` + linkEscaped + `</a></p><div style="border-top:1px solid #e2e8f0;padding-top:18px;color:#64748b;font-size:13px;line-height:1.6;">` + note + `</div></td></tr>
     </table>
   </td></tr></table>
 </body></html>`
