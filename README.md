@@ -45,7 +45,7 @@ Administrators can review recent security and administrative events from Admin �
 
 ## Email settings and Microsoft Graph sendMail
 
-Administrators can configure SMTP settings or Microsoft Graph `sendMail` with app-only authentication from Admin → Email settings. Secrets such as SMTP passwords and Graph client secrets should be handled like deployment secrets and must not be logged or shared.
+Administrators can configure SMTP settings or Microsoft Graph `sendMail` with app-only authentication from Admin → Email settings. Direct link emails use a styled HTML message with a plain-text fallback and follow the sender's current UI language. Secrets such as SMTP passwords and Graph client secrets should be handled like deployment secrets and must not be logged or shared.
 
 To configure Microsoft Graph `sendMail` with app-only authentication:
 
@@ -190,4 +190,4 @@ Uploaded files are encrypted before being written under `STORAGE_PATH`. The orig
 
 ## Future extension points
 
-The code is structured for later additions such as custom domains, S3-compatible storage, REST API keys, team workspaces, audit logs, and expanded administrative reporting.
+The code is structured for later additions such as custom domains, S3-compatible storage, REST API keys, multi-team workspace isolation, and expanded administrative reporting.
