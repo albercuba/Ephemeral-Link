@@ -26,7 +26,7 @@ func (c *fakeGraphClient) Do(req *http.Request) (*http.Response, error) {
 func TestSendGraphRequestsTokenAndSendMail(t *testing.T) {
 	client := &fakeGraphClient{}
 	cfg := redisstore.IntegrationConfig{GraphTenantID: "tenant", GraphClientID: "client", GraphClientSecret: "secret", GraphSender: "sender@example.com"}
-	if err := sendGraph(context.Background(), client, cfg, "to@example.com", "Subject", "Body"); err != nil {
+	if err := sendGraph(context.Background(), client, cfg, "to@example.com", "Subject", emailContent{Plain: "Body"}); err != nil {
 		t.Fatal(err)
 	}
 	if len(client.requests) != 2 {

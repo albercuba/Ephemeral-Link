@@ -3,16 +3,20 @@ package web
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net"
 	"net/http"
 	"net/mail"
 	"net/smtp"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
 	"ephemeral-link/internal/redisstore"
 )
@@ -30,12 +34,19 @@ func (a *App) sendUploadNotificationEmail(ctx context.Context, to, link string) 
 }
 
 func (a *App) sendCreatedLinkEmail(ctx context.Context, to, link, creatorName, kind string) error {
-	subject := a.i18n.T(a.cfg.DefaultLanguage, "created_link_email_subject")
-	body := fmt.Sprintf(a.i18n.T(a.cfg.DefaultLanguage, "created_link_email_body"), creatorName, kind, link) + "\n\n" + a.i18n.T(a.cfg.DefaultLanguage, "link_security_note")
-	return a.sendEmail(ctx, to, subject, body)
+	subject := strings.TrimSpace(creatorName) + " shared a secret link with you."
+	plain := fmt.Sprintf("%s shared a secure %s link with you:\n\n%s\n\n%s", creatorName, kind, link, a.i18n.T(a.cfg.DefaultLanguage, "link_security_note"))
+	htmlBody := createdLinkHTML(creatorName, kind, link, a.i18n.T(a.cfg.DefaultLanguage, "link_security_note"))
+	return a.sendEmailContent(ctx, to, subject, emailContent{Plain: plain, HTML: htmlBody})
 }
 
+type emailContent struct { Plain string; HTML string }
+
 func (a *App) sendEmail(ctx context.Context, to, subject, body string) error {
+	return a.sendEmailContent(ctx, to, subject, emailContent{Plain: body})
+}
+
+func (a *App) sendEmailContent(ctx context.Context, to, subject string, content emailContent) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -46,15 +57,15 @@ func (a *App) sendEmail(ctx context.Context, to, subject, body string) error {
 		return err
 	}
 	if cfg.GraphEnabled {
-		return sendGraph(ctx, http.DefaultClient, cfg, to, subject, body)
+		return sendGraph(ctx, http.DefaultClient, cfg, to, subject, content)
 	}
 	if !cfg.SMTPEnabled {
 		return errors.New("email delivery is not enabled")
 	}
-	return sendSMTP(cfg, to, subject, body)
+	return sendSMTP(cfg, to, subject, content)
 }
 
-func sendSMTP(cfg redisstore.IntegrationConfig, to, subject, body string) error {
+func sendSMTP(cfg redisstore.IntegrationConfig, to, subject string, content emailContent) error {
 	from := strings.TrimSpace(cfg.SMTPFrom)
 	if from == "" {
 		from = strings.TrimSpace(cfg.SMTPUsername)
@@ -75,22 +86,15 @@ func sendSMTP(cfg redisstore.IntegrationConfig, to, subject, body string) error 
 		auth = smtp.PlainAuth("", cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPHost)
 	}
 
-	var msg bytes.Buffer
-	msg.WriteString("From: " + from + "\r\n")
-	msg.WriteString("To: " + to + "\r\n")
-	msg.WriteString("Subject: " + sanitizeHeader(subject) + "\r\n")
-	msg.WriteString("MIME-Version: 1.0\r\n")
-	msg.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
-	msg.WriteString("\r\n")
-	msg.WriteString(body)
-	return smtp.SendMail(addr, auth, from, []string{to}, msg.Bytes())
+	msg := buildMIMEMessage(from, to, subject, content)
+	return smtp.SendMail(addr, auth, from, []string{to}, msg)
 }
 
 type graphHTTPClient interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-func sendGraph(ctx context.Context, client graphHTTPClient, cfg redisstore.IntegrationConfig, to, subject, body string) error {
+func sendGraph(ctx context.Context, client graphHTTPClient, cfg redisstore.IntegrationConfig, to, subject string, content emailContent) error {
 	if _, err := mail.ParseAddress(to); err != nil {
 		return fmt.Errorf("invalid recipient address")
 	}
@@ -101,7 +105,7 @@ func sendGraph(ctx context.Context, client graphHTTPClient, cfg redisstore.Integ
 	if err != nil {
 		return err
 	}
-	return graphSendMail(ctx, client, cfg.GraphSender, token, to, subject, body)
+	return graphSendMail(ctx, client, cfg.GraphSender, token, to, subject, content)
 }
 
 func graphToken(ctx context.Context, client graphHTTPClient, cfg redisstore.IntegrationConfig) (string, error) {
@@ -137,19 +141,15 @@ func graphToken(ctx context.Context, client graphHTTPClient, cfg redisstore.Inte
 	return parsed.AccessToken, nil
 }
 
-func graphSendMail(ctx context.Context, client graphHTTPClient, sender, token, to, subject, body string) error {
-	payload := map[string]any{"message": map[string]any{"subject": subject, "body": map[string]string{"contentType": "Text", "content": body}, "toRecipients": []map[string]any{{"emailAddress": map[string]string{"address": to}}}}, "saveToSentItems": false}
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
+func graphSendMail(ctx context.Context, client graphHTTPClient, sender, token, to, subject string, content emailContent) error {
+	data := []byte(base64.StdEncoding.EncodeToString(buildMIMEMessage(sender, to, subject, content)))
 	endpoint := "https://graph.microsoft.com/v1.0/users/" + url.PathEscape(sender) + "/sendMail"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "text/plain")
 	res, err := client.Do(req)
 	if err != nil {
 		return err
@@ -160,6 +160,63 @@ func graphSendMail(ctx context.Context, client graphHTTPClient, sender, token, t
 		return fmt.Errorf("Graph sendMail failed with status %d: %s", res.StatusCode, safeGraphError(responseData))
 	}
 	return nil
+}
+
+func buildMIMEMessage(from, to, subject string, content emailContent) []byte {
+	if strings.TrimSpace(content.Plain) == "" {
+		content.Plain = "This message contains a secure Ephemeral Link notification."
+	}
+	boundary := "ephemeral-link-" + strconv.FormatInt(time.Now().UnixNano(), 36)
+	var msg bytes.Buffer
+	msg.WriteString("From: " + sanitizeHeader(from) + "\r\n")
+	msg.WriteString("To: " + sanitizeHeader(to) + "\r\n")
+	msg.WriteString("Subject: " + sanitizeHeader(subject) + "\r\n")
+	msg.WriteString("MIME-Version: 1.0\r\n")
+	if strings.TrimSpace(content.HTML) == "" {
+		msg.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
+		msg.WriteString("Content-Transfer-Encoding: base64\r\n\r\n")
+		msg.WriteString(wrapBase64(content.Plain))
+		return msg.Bytes()
+	}
+	msg.WriteString("Content-Type: multipart/alternative; boundary=\"" + boundary + "\"\r\n\r\n")
+	msg.WriteString("--" + boundary + "\r\n")
+	msg.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
+	msg.WriteString("Content-Transfer-Encoding: base64\r\n\r\n")
+	msg.WriteString(wrapBase64(content.Plain))
+	msg.WriteString("\r\n--" + boundary + "\r\n")
+	msg.WriteString("Content-Type: text/html; charset=UTF-8\r\n")
+	msg.WriteString("Content-Transfer-Encoding: base64\r\n\r\n")
+	msg.WriteString(wrapBase64(content.HTML))
+	msg.WriteString("\r\n--" + boundary + "--\r\n")
+	return msg.Bytes()
+}
+
+func createdLinkHTML(creatorName, kind, link, securityNote string) string {
+	creator := html.EscapeString(strings.TrimSpace(creatorName))
+	if creator == "" { creator = "Someone" }
+	kind = html.EscapeString(strings.TrimSpace(kind))
+	linkEscaped := html.EscapeString(link)
+	note := html.EscapeString(securityNote)
+	return `<!doctype html>
+<html><body style="margin:0;background:#f6f8fb;font-family:Arial,sans-serif;color:#172033;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f8fb;padding:32px 16px;"><tr><td align="center">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border:1px solid #dfe7ef;border-radius:18px;overflow:hidden;box-shadow:0 20px 50px rgba(15,23,42,.08);">
+      <tr><td style="background:linear-gradient(135deg,#f97316,#ffb020);padding:26px 30px;color:#111827;"><div style="font-size:13px;text-transform:uppercase;letter-spacing:.14em;font-weight:700;">Ephemeral Link</div><h1 style="margin:8px 0 0;font-size:26px;line-height:1.2;">A secure link was shared with you</h1></td></tr>
+      <tr><td style="padding:30px;"><p style="font-size:16px;line-height:1.6;margin:0 0 18px;">` + creator + ` shared a secure ` + kind + ` link with you.</p><p style="font-size:14px;line-height:1.6;color:#42536a;margin:0 0 24px;">This is a single-use secure link. Open it only when you are ready to view or download the content.</p><p style="text-align:center;margin:28px 0;"><a href="` + linkEscaped + `" style="display:inline-block;background:#f97316;color:#111827;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:12px;">Open secure link</a></p><p style="font-size:13px;line-height:1.6;color:#64748b;margin:0 0 10px;">If the button does not work, copy and paste this URL into your browser:</p><p style="font-size:13px;line-height:1.6;word-break:break-all;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin:0 0 22px;"><a href="` + linkEscaped + `" style="color:#c2410c;">` + linkEscaped + `</a></p><div style="border-top:1px solid #e2e8f0;padding-top:18px;color:#64748b;font-size:13px;line-height:1.6;">` + note + `</div></td></tr>
+    </table>
+  </td></tr></table>
+</body></html>`
+}
+
+func wrapBase64(value string) string {
+	encoded := base64.StdEncoding.EncodeToString([]byte(value))
+	var out strings.Builder
+	for len(encoded) > 76 {
+		out.WriteString(encoded[:76] + "\r\n")
+		encoded = encoded[76:]
+	}
+	out.WriteString(encoded + "\r\n")
+	return out.String()
 }
 
 func safeGraphError(data []byte) string {
