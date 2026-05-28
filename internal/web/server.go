@@ -369,7 +369,7 @@ func (a *App) createUploadRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	link := strings.TrimRight(a.cfg.AppBaseURL, "/") + "/upload/" + id
 	if delivery == "email" {
-		if err := a.sendUploadRequestEmail(r.Context(), recipient, link, displayUser(user), req.Message); err != nil {
+		if err := a.sendUploadRequestEmail(r.Context(), a.lang(r), recipient, link, displayUser(user), req.Message); err != nil {
 			a.bad(w, r, err)
 			return
 		}
@@ -481,7 +481,7 @@ func (a *App) submitUploadRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.FormValue("notify_requester") == "on" && req.RequesterEmail != "" {
 		link := strings.TrimRight(a.cfg.AppBaseURL, "/") + "/f/" + item.ID
-		if err := a.sendUploadNotificationEmail(r.Context(), req.RequesterEmail, link); err != nil {
+		if err := a.sendUploadNotificationEmail(r.Context(), a.lang(r), req.RequesterEmail, link); err != nil {
 			a.log.Warn("upload notification failed", "error", err)
 		}
 	}
@@ -669,7 +669,7 @@ func (a *App) sendCreatedLinkIfRequested(w http.ResponseWriter, r *http.Request,
 	if user, ok := currentUser(r); ok {
 		creator = displayUser(user)
 	}
-	if err := a.sendCreatedLinkEmail(r.Context(), recipient, link, creator, kind); err != nil {
+	if err := a.sendCreatedLinkEmail(r.Context(), a.lang(r), recipient, link, creator, kind); err != nil {
 		a.audit(r, "send_created_link_email", item.ID, "failure", kind)
 		a.log.Warn("created link email failed", "error", err, "item", item.ID, "kind", kind)
 		return "failed", true

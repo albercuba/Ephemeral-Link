@@ -21,22 +21,25 @@ import (
 	"ephemeral-link/internal/redisstore"
 )
 
-func (a *App) sendUploadRequestEmail(ctx context.Context, to, link, requesterName, message string) error {
-	subject := a.i18n.T(a.cfg.DefaultLanguage, "upload_request_email_subject")
-	body := fmt.Sprintf("%s\n\n%s\n\n%s", fmt.Sprintf(a.i18n.T(a.cfg.DefaultLanguage, "upload_request_email_body"), requesterName, link), strings.TrimSpace(message), a.i18n.T(a.cfg.DefaultLanguage, "link_security_note"))
+func (a *App) sendUploadRequestEmail(ctx context.Context, lang, to, link, requesterName, message string) error {
+	lang = a.i18n.Normalize(lang)
+	subject := a.i18n.T(lang, "upload_request_email_subject")
+	body := fmt.Sprintf("%s\n\n%s\n\n%s", fmt.Sprintf(a.i18n.T(lang, "upload_request_email_body"), requesterName, link), strings.TrimSpace(message), a.i18n.T(lang, "link_security_note"))
 	return a.sendEmail(ctx, to, subject, body)
 }
 
-func (a *App) sendUploadNotificationEmail(ctx context.Context, to, link string) error {
-	subject := a.i18n.T(a.cfg.DefaultLanguage, "upload_notification_email_subject")
-	body := fmt.Sprintf(a.i18n.T(a.cfg.DefaultLanguage, "upload_notification_email_body"), link)
+func (a *App) sendUploadNotificationEmail(ctx context.Context, lang, to, link string) error {
+	lang = a.i18n.Normalize(lang)
+	subject := a.i18n.T(lang, "upload_notification_email_subject")
+	body := fmt.Sprintf(a.i18n.T(lang, "upload_notification_email_body"), link)
 	return a.sendEmail(ctx, to, subject, body)
 }
 
-func (a *App) sendCreatedLinkEmail(ctx context.Context, to, link, creatorName, kind string) error {
+func (a *App) sendCreatedLinkEmail(ctx context.Context, lang, to, link, creatorName, kind string) error {
+	lang = a.i18n.Normalize(lang)
 	subject := strings.TrimSpace(creatorName) + " shared a secret link with you."
-	plain := fmt.Sprintf("%s shared a secure %s link with you:\n\n%s\n\n%s", creatorName, kind, link, a.i18n.T(a.cfg.DefaultLanguage, "link_security_note"))
-	htmlBody := createdLinkHTML(creatorName, kind, link, a.i18n.T(a.cfg.DefaultLanguage, "link_security_note"))
+	plain := fmt.Sprintf(a.i18n.T(lang, "created_link_email_body"), creatorName, kind, link) + "\n\n" + a.i18n.T(lang, "link_security_note")
+	htmlBody := createdLinkHTML(creatorName, kind, link, a.i18n.T(lang, "link_security_note"))
 	return a.sendEmailContent(ctx, to, subject, emailContent{Plain: plain, HTML: htmlBody})
 }
 

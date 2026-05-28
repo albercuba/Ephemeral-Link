@@ -1900,6 +1900,25 @@ html[data-theme="dark"] .email-config-warning-card .warning-icon {
     vertical-align: top;
 }
 
+.audit-table-scroll {
+    min-height: min(29rem, 70vh);
+    max-height: min(29rem, 70vh);
+    overflow: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius);
+}
+
+.audit-table-scroll .admin-table {
+    min-width: 62rem;
+}
+
+.audit-table-scroll .admin-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f8fafc;
+}
+
 .audit-filter-form {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
