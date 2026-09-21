@@ -2,6 +2,8 @@ package redisstore
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
@@ -271,6 +273,47 @@ func (s *Store) GetSession(ctx context.Context, token string) (string, error) {
 func (s *Store) DeleteSession(ctx context.Context, token string) error {
 	return s.rdb.Del(ctx, sessionKey(token)).Err()
 }
+
+func throttleKey(scope, identity string) string {
+	sum := sha256.Sum256([]byte(scope + ":" + identity))
+	return "el:throttle:" + scope + ":" + hex.EncodeToString(sum[:])
+}
+
+func (s *Store) FailureLimitExceeded(ctx context.Context, scope, identity string, limit int64) (bool, error) {
+	if limit <= 0 {
+		return false, nil
+	}
+	count, err := s.rdb.Get(ctx, throttleKey(scope, identity)).Int64()
+	if err == redis.Nil {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return count >= limit, nil
+}
+
+func (s *Store) RegisterFailure(ctx context.Context, scope, identity string, limit int64, window time.Duration) (bool, error) {
+	if limit <= 0 || window <= 0 {
+		return false, nil
+	}
+	k := throttleKey(scope, identity)
+	count, err := s.rdb.Incr(ctx, k).Result()
+	if err != nil {
+		return false, err
+	}
+	if count == 1 {
+		if err := s.rdb.Expire(ctx, k, window).Err(); err != nil {
+			return false, err
+		}
+	}
+	return count >= limit, nil
+}
+
+func (s *Store) ResetFailures(ctx context.Context, scope, identity string) error {
+	return s.rdb.Del(ctx, throttleKey(scope, identity)).Err()
+}
+
 func (s *Store) ListAvailableItems(ctx context.Context) ([]Item, error) {
 	keys, err := s.rdb.Keys(ctx, "el:item:*").Result()
 	if err != nil {

@@ -36,6 +36,7 @@
   "gone_title": "Dieser Inhalt ist nicht mehr verfügbar",
   "gone_text": "Das Geheimnis oder die Datei wurde bereits angesehen, heruntergeladen oder ist abgelaufen.",
   "bad_passphrase": "Das Passwort ist nicht korrekt.",
+  "too_many_attempts": "Zu viele fehlgeschlagene Versuche. Bitte warte ein paar Minuten und versuche es erneut.",
   "invalid_text_secret": "Gib einen geheimen Text innerhalb der erlaubten Größe ein.",
   "invalid_file": "Wähle eine Datei innerhalb der erlaubten Größe aus.",
   "server_error": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",

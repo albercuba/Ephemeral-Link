@@ -28,6 +28,9 @@ type userContextKey struct{}
 
 const sessionCookieName = "ephemeral_session"
 const sessionTTL = 8 * time.Hour
+const loginFailureLimit int64 = 5
+const passphraseFailureLimit int64 = 5
+const authFailureWindow = 15 * time.Minute
 
 func (a *App) setupRequired(ctx context.Context) (bool, error) {
 	hasAdmin, err := a.store.HasAdmin(ctx)
@@ -116,11 +119,34 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 func (a *App) loginPost(w http.ResponseWriter, r *http.Request) {
 	username := strings.TrimSpace(r.FormValue("username"))
 	password := r.FormValue("password")
+	throttleID := strings.ToLower(username) + "|" + clientAddress(r)
+	limited, err := a.store.FailureLimitExceeded(r.Context(), "login", throttleID, loginFailureLimit)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	if limited {
+		a.audit(r, "local_login", username, "blocked", "too many failed attempts")
+		loginNoStore(w)
+		a.render(w, r, http.StatusTooManyRequests, "login.html", Page{Title: "Sign in", Error: a.t(r, "too_many_attempts")})
+		return
+	}
 	user, err := a.store.GetUser(r.Context(), username)
 	if err != nil || user.PasswordHash == "" || !sec.VerifyPassphrase(user.PasswordHash, password) {
+		limited, limitErr := a.store.RegisterFailure(r.Context(), "login", throttleID, loginFailureLimit, authFailureWindow)
+		if limitErr != nil {
+			a.bad(w, r, limitErr)
+			return
+		}
 		a.audit(r, "local_login", username, "failed", "invalid credentials")
 		loginNoStore(w)
-		a.render(w, r, 401, "login.html", Page{Title: "Sign in", Error: "Invalid username or password."})
+		status := http.StatusUnauthorized
+		errorMessage := "Invalid username or password."
+		if limited {
+			status = http.StatusTooManyRequests
+			errorMessage = a.t(r, "too_many_attempts")
+		}
+		a.render(w, r, status, "login.html", Page{Title: "Sign in", Error: errorMessage})
 		return
 	}
 	token, err := sec.Token()
@@ -132,6 +158,7 @@ func (a *App) loginPost(w http.ResponseWriter, r *http.Request) {
 		a.bad(w, r, err)
 		return
 	}
+	_ = a.store.ResetFailures(r.Context(), "login", throttleID)
 	a.audit(r, "local_login", user.Username, "success", "")
 	http.SetCookie(w, &http.Cookie{Name: sessionCookieName, Value: token, Path: "/", MaxAge: int(sessionTTL.Seconds()), HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: a.cfg.SecureCookies})
 	http.Redirect(w, r, "/", 303)

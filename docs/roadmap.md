@@ -53,12 +53,12 @@ Status: existing implementation reviewed in `internal/redisstore/store.go` and `
 
 ### 1.5 Brute-force protection for passphrases and logins
 
-- [ ] Add throttling for local login failures.
-- [ ] Add throttling for link passphrase failures.
-- [ ] Keep throttling metadata free of plaintext passphrases, secrets, or generated links.
+- [x] Add throttling for local login failures.
+- [x] Add throttling for link passphrase failures.
+- [x] Keep throttling metadata free of plaintext passphrases, secrets, or generated links.
 - [ ] Add tests for lockout/rate-limit behavior.
 
-Status: not started.
+Status: implemented with Redis-backed failure counters in `internal/redisstore/store.go`, `internal/web/auth.go`, and `internal/web/server.go`; tests still needed.
 
 ### 1.6 Neutralize CSV formula injection in the audit export
 

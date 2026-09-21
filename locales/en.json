@@ -36,6 +36,7 @@
   "gone_title": "This item is gone",
   "gone_text": "The secret or file has already been viewed, downloaded, or expired.",
   "bad_passphrase": "The password is not correct.",
+  "too_many_attempts": "Too many failed attempts. Please wait a few minutes and try again.",
   "invalid_text_secret": "Enter a text secret within the allowed size.",
   "invalid_file": "Choose a file within the allowed size.",
   "server_error": "Something went wrong. Please try again.",

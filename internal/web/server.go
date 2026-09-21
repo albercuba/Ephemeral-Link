@@ -510,10 +510,33 @@ func (a *App) revealText(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/expired", 303)
 		return
 	}
-	if !sec.VerifyPassphrase(item.PassphraseHash, r.FormValue("passphrase")) {
-		a.render(w, r, 403, "view_text.html", Page{Title: a.t(r, "view_secret_title"), ID: id, HasPassphrase: item.HasPassphrase, Error: a.t(r, "bad_passphrase")})
+	throttleID := id + "|" + clientAddress(r)
+	limited, err := a.store.FailureLimitExceeded(r.Context(), "passphrase", throttleID, passphraseFailureLimit)
+	if err != nil {
+		a.bad(w, r, err)
 		return
 	}
+	if limited {
+		a.audit(r, "reveal_text_link", id, "blocked", "too many failed passphrase attempts")
+		a.render(w, r, http.StatusTooManyRequests, "view_text.html", Page{Title: a.t(r, "view_secret_title"), ID: id, HasPassphrase: item.HasPassphrase, Error: a.t(r, "too_many_attempts")})
+		return
+	}
+	if !sec.VerifyPassphrase(item.PassphraseHash, r.FormValue("passphrase")) {
+		limited, limitErr := a.store.RegisterFailure(r.Context(), "passphrase", throttleID, passphraseFailureLimit, authFailureWindow)
+		if limitErr != nil {
+			a.bad(w, r, limitErr)
+			return
+		}
+		status := http.StatusForbidden
+		errorMessage := a.t(r, "bad_passphrase")
+		if limited {
+			status = http.StatusTooManyRequests
+			errorMessage = a.t(r, "too_many_attempts")
+		}
+		a.render(w, r, status, "view_text.html", Page{Title: a.t(r, "view_secret_title"), ID: id, HasPassphrase: item.HasPassphrase, Error: errorMessage})
+		return
+	}
+	_ = a.store.ResetFailures(r.Context(), "passphrase", throttleID)
 	claimed, err := a.store.Claim(r.Context(), id)
 	if err != nil {
 		http.Redirect(w, r, "/expired", 303)
@@ -547,10 +570,33 @@ func (a *App) downloadFile(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/expired", 303)
 		return
 	}
-	if !sec.VerifyPassphrase(item.PassphraseHash, r.FormValue("passphrase")) {
-		a.render(w, r, 403, "view_file.html", Page{Title: a.t(r, "download_title"), ID: id, Filename: item.SanitizedFilename, Size: item.FileSize, Mime: item.MimeType, HasPassphrase: item.HasPassphrase, Error: a.t(r, "bad_passphrase")})
+	throttleID := id + "|" + clientAddress(r)
+	limited, err := a.store.FailureLimitExceeded(r.Context(), "passphrase", throttleID, passphraseFailureLimit)
+	if err != nil {
+		a.bad(w, r, err)
 		return
 	}
+	if limited {
+		a.audit(r, "download_file_link", id, "blocked", "too many failed passphrase attempts")
+		a.render(w, r, http.StatusTooManyRequests, "view_file.html", Page{Title: a.t(r, "download_title"), ID: id, Filename: item.SanitizedFilename, Size: item.FileSize, Mime: item.MimeType, HasPassphrase: item.HasPassphrase, Error: a.t(r, "too_many_attempts")})
+		return
+	}
+	if !sec.VerifyPassphrase(item.PassphraseHash, r.FormValue("passphrase")) {
+		limited, limitErr := a.store.RegisterFailure(r.Context(), "passphrase", throttleID, passphraseFailureLimit, authFailureWindow)
+		if limitErr != nil {
+			a.bad(w, r, limitErr)
+			return
+		}
+		status := http.StatusForbidden
+		errorMessage := a.t(r, "bad_passphrase")
+		if limited {
+			status = http.StatusTooManyRequests
+			errorMessage = a.t(r, "too_many_attempts")
+		}
+		a.render(w, r, status, "view_file.html", Page{Title: a.t(r, "download_title"), ID: id, Filename: item.SanitizedFilename, Size: item.FileSize, Mime: item.MimeType, HasPassphrase: item.HasPassphrase, Error: errorMessage})
+		return
+	}
+	_ = a.store.ResetFailures(r.Context(), "passphrase", throttleID)
 	claimed, err := a.store.Claim(r.Context(), id)
 	if err != nil {
 		http.Redirect(w, r, "/expired", 303)
@@ -859,6 +905,14 @@ func firstForwardedIP(header string) net.IP {
 		}
 	}
 	return nil
+}
+
+func clientAddress(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err == nil {
+		return host
+	}
+	return r.RemoteAddr
 }
 
 func (a *App) audit(r *http.Request, event, target, result, details string) {
