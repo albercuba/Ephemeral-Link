@@ -1,24 +1,232 @@
-# Roadmap
+# Ephemeral Link — Security & Reliability Hardening Roadmap
 
-This roadmap distinguishes the first stable production release from larger platform features planned for a later major version.
+This roadmap tracks the security and reliability hardening work needed before treating Ephemeral Link as production-ready. Items are grouped by priority and should be implemented with tests where practical.
 
-## v1.0.0 goals
+## 0. Ground rules
 
-- Email delivery beyond upload-request notifications
-  - Users can optionally email newly created text/file links directly to a recipient.
-  - Upload-request emails and upload notifications remain supported through the same SMTP or Microsoft Graph delivery configuration.
-  - Passphrases are not emailed automatically; share them through a separate channel.
-- Admin analytics
-  - Admins can review aggregate operational counts from active metadata and recent audit events.
-  - Analytics intentionally exclude plaintext secrets, file contents, passphrases, tokens, and generated links.
+- [ ] Keep single-use claims atomic.
+- [ ] Verify passphrases before claiming an item.
+- [ ] Never log plaintext secrets, files, passphrases, generated links, raw encryption keys, SMTP credentials, Graph client secrets, or Microsoft tokens.
+- [ ] Keep audit logs metadata-only.
+- [ ] Keep files outside the public web root.
+- [ ] Preserve AES-256-GCM encryption with per-item data keys wrapped by `ENCRYPTION_MASTER_KEY` unless replacing it with an equally strong reviewed design.
+- [ ] Keep CSRF protection, request limits, secure headers, Redis TTL expiry, and cleanup behavior enabled.
 
-## v2.0.0 goals
+## Phase 1 — High priority security
 
-- S3-compatible storage
-  - Add an object storage backend for encrypted file blobs while keeping local storage available.
-- REST API keys
-  - Add scoped, revocable API keys for programmatic creation and management of links.
-- User workspaces
-  - Add workspace-scoped users, links, branding, settings, audit views, and permissions.
-- Custom domains
-  - Add verified workspace/domain mappings so generated links can use organization-owned hostnames.
+### 1.1 Remove the public fallback master key
+
+- [x] Require `ENCRYPTION_MASTER_KEY` in all environments.
+- [x] Reject missing, non-base64, or incorrectly sized master keys.
+- [x] Document that the app will not start without a valid master key.
+
+Status: complete / confirmed in `internal/config/config.go` and `README.md`.
+
+### 1.2 Wipe payload from Redis when an item is claimed
+
+- [x] Keep claim operation atomic with Redis Lua.
+- [x] Return the claimed item to the request handler for delivery.
+- [x] Remove wrapped key, payload nonce/ciphertext, and storage object path from Redis after a successful claim.
+- [ ] Add Redis-backed regression tests for the claim script.
+
+Status: implemented in `internal/redisstore/store.go`; tests still needed.
+
+### 1.3 Trusted proxies instead of blindly trusting `X-Forwarded-For`
+
+- [x] Remove blind `X-Forwarded-For` trust from rate limiting.
+- [x] Remove blind `middleware.RealIP` usage.
+- [x] Add `TRUSTED_PROXIES` configuration.
+- [x] Trust `X-Forwarded-For` / `X-Real-IP` only when the direct peer is trusted.
+- [x] Document `TRUSTED_PROXIES`.
+- [ ] Add middleware tests for trusted and untrusted proxy cases.
+
+Status: implemented in `internal/web/server.go`, `internal/ratelimit/ratelimit.go`, `internal/config/config.go`, and `README.md`; tests still needed.
+
+### 1.4 Make first-run `/setup` safe
+
+- [x] Use Redis `SETNX` lock for initial admin creation.
+- [x] Recheck admin existence inside the locked creation path.
+- [ ] Add concurrent setup regression test.
+- [ ] Consider rate limiting setup attempts.
+
+Status: existing implementation reviewed in `internal/redisstore/store.go` and `internal/web/auth.go`; tests still needed.
+
+### 1.5 Brute-force protection for passphrases and logins
+
+- [ ] Add throttling for local login failures.
+- [ ] Add throttling for link passphrase failures.
+- [ ] Keep throttling metadata free of plaintext passphrases, secrets, or generated links.
+- [ ] Add tests for lockout/rate-limit behavior.
+
+Status: not started.
+
+### 1.6 Neutralize CSV formula injection in the audit export
+
+- [x] Sanitize dynamic audit CSV cells starting with spreadsheet formula trigger characters.
+- [x] Preserve CSV export behavior while preventing formula execution in spreadsheet tools.
+- [ ] Add unit tests for CSV cell sanitization.
+
+Status: implemented in `internal/web/auth.go`; tests still needed.
+
+## Phase 2 — Medium priority
+
+### 2.1 Entra identity: key on `oid`, never merge with local accounts
+
+- [ ] Store Entra users under stable object ID (`oid`) instead of mutable usernames/emails.
+- [ ] Prevent accidental merge with local accounts.
+- [ ] Preserve display names/emails as metadata only.
+- [ ] Add migration/compatibility handling for existing Entra users.
+
+Status: not started.
+
+### 2.2 Replace hand-rolled JWT validation
+
+- [ ] Replace custom JWT/JWKS validation with a maintained library or hardened verifier.
+- [ ] Validate issuer, audience, expiry, algorithm, key ID, and nonce where applicable.
+- [ ] Add tests for invalid audience/issuer/expiry/signature.
+
+Status: not started.
+
+### 2.3 Remove `KEYS` from hot paths
+
+- [ ] Find any Redis `KEYS` usage.
+- [ ] Replace with indexes or `SCAN`-based iteration.
+- [ ] Add tests for list/search behavior.
+
+Status: not started.
+
+### 2.4 Stop putting the secret link into URLs
+
+- [ ] Avoid exposing generated links in query strings where possible.
+- [ ] Avoid leaking generated links via Referer headers, logs, or browser history.
+- [ ] Update templates and email flows without logging full links.
+
+Status: not started.
+
+### 2.5 Response headers: no-store and HSTS
+
+- [ ] Add `Cache-Control: no-store` for sensitive pages/responses.
+- [ ] Add HSTS when serving behind HTTPS / secure cookies.
+- [ ] Verify headers on reveal, download, login, setup, and admin pages.
+
+Status: not started.
+
+### 2.6 Self-host fonts, icons and MSAL; tighten the CSP
+
+- [ ] Remove production dependencies on external font/icon/script CDNs.
+- [ ] Self-host required static assets.
+- [ ] Tighten CSP after external assets are removed.
+- [ ] Update third-party notices.
+
+Status: not started.
+
+### 2.7 Encrypt integration secrets at rest
+
+- [ ] Encrypt SMTP credentials, Graph client secrets, and other integration secrets before storing them in Redis.
+- [ ] Reuse the master-key wrapping design or equivalent reviewed design.
+- [ ] Avoid displaying existing secret values back to the UI.
+- [ ] Add tests for save/load behavior.
+
+Status: not started.
+
+### 2.8 Turn the side-effecting download GET into a POST
+
+- [ ] Ensure claim/download side effects happen on POST only.
+- [ ] Preserve user experience with an interstitial form if needed.
+- [ ] Keep valid file downloads consumed even if transfer is interrupted.
+- [ ] Add handler tests.
+
+Status: not started.
+
+### 2.9 CSRF and request-size hardening
+
+- [ ] Review all state-changing routes for CSRF coverage.
+- [ ] Ensure upload/text/request body limits are enforced consistently.
+- [ ] Add tests for oversized requests and missing/invalid CSRF tokens.
+
+Status: not started.
+
+## Phase 3 — Lower priority hardening, hygiene, and tests
+
+### 3.1 Docker / Compose hardening
+
+- [ ] Review container user, filesystem permissions, health checks, and restart policy.
+- [ ] Avoid unnecessary writable paths.
+- [ ] Document production Compose settings.
+
+Status: not started.
+
+### 3.2 File handling improvements
+
+- [ ] Review whole-file buffering and memory growth risks.
+- [ ] Improve cleanup of orphaned encrypted files.
+- [ ] Add tests for filename sanitization and storage cleanup.
+
+Status: not started.
+
+### 3.3 i18n and error messages
+
+- [ ] Ensure every visible UI string comes from `locales/en.json` and `locales/de.json`.
+- [ ] Keep user-facing email copy localized.
+- [ ] Avoid leaking sensitive operational details in user-facing errors.
+
+Status: not started.
+
+### 3.4 Code hygiene
+
+- [ ] Split large handlers where it improves readability.
+- [ ] Remove dead code and unused assets.
+- [ ] Keep security-sensitive helpers small and tested.
+
+Status: not started.
+
+### 3.5 Documentation cleanup
+
+- [ ] Update deployment docs for every behavior/config change.
+- [ ] Keep `.env.example`, README, and production docs in sync.
+- [ ] Document operational backup/restore expectations.
+
+Status: in progress; README updated for master key and trusted proxy configuration.
+
+### 3.6 Test coverage
+
+- [ ] Add Redis claim semantics tests.
+- [ ] Add setup race tests.
+- [ ] Add passphrase/login brute-force tests.
+- [ ] Add audit CSV injection tests.
+- [ ] Add security header tests.
+- [ ] Add request-size/CSRF tests.
+
+Status: not started.
+
+## Final verification checklist
+
+Run after the hardening work is complete:
+
+```sh
+gofmt -w ./...
+go test ./...
+docker compose config
+docker compose build
+```
+
+Manual security checks:
+
+- [ ] App refuses to start without a valid `ENCRYPTION_MASTER_KEY`.
+- [ ] Claimed Redis items no longer retain payload/key fields.
+- [ ] Untrusted clients cannot spoof IPs with `X-Forwarded-For`.
+- [ ] Setup cannot create multiple initial admins under concurrent requests.
+- [ ] Login and passphrase brute-force attempts are throttled.
+- [ ] Audit CSV export neutralizes formula injection.
+- [ ] Sensitive pages and responses are not cached.
+- [ ] File download/reveal semantics remain single-use.
+
+## Future platform extensions
+
+These are larger feature goals after the hardening roadmap:
+
+- [ ] S3-compatible encrypted file storage backend.
+- [ ] Scoped, revocable REST API keys.
+- [ ] User/workspace isolation.
+- [ ] Custom domains.
+- [ ] Expanded administrative reporting.
