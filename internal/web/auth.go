@@ -439,11 +439,32 @@ func (a *App) adminAuditCSV(w http.ResponseWriter, r *http.Request) {
 	writer := csv.NewWriter(w)
 	_ = writer.Write([]string{"time", "actor", "event", "target", "result", "details", "ip"})
 	for _, event := range filtered {
-		_ = writer.Write([]string{time.Unix(event.CreatedAt, 0).UTC().Format(time.RFC3339), event.Actor, event.Event, event.Target, event.Result, event.Details, event.IP})
+		_ = writer.Write([]string{
+			time.Unix(event.CreatedAt, 0).UTC().Format(time.RFC3339),
+			csvSafeCell(event.Actor),
+			csvSafeCell(event.Event),
+			csvSafeCell(event.Target),
+			csvSafeCell(event.Result),
+			csvSafeCell(event.Details),
+			csvSafeCell(event.IP),
+		})
 	}
 	writer.Flush()
 	if err := writer.Error(); err != nil {
 		a.log.Error("audit csv export failed", "error", err)
+	}
+}
+
+func csvSafeCell(value string) string {
+	trimmed := strings.TrimLeft(value, "\t\r\n ")
+	if trimmed == "" {
+		return value
+	}
+	switch trimmed[0] {
+	case '=', '+', '-', '@':
+		return "'" + value
+	default:
+		return value
 	}
 }
 

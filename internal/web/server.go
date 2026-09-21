@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"mime"
+	"net"
 	"net/http"
 	"net/mail"
 	"os"
@@ -31,12 +32,13 @@ import (
 )
 
 type App struct {
-	cfg       config.Config
-	store     *redisstore.Store
-	files     *storage.Local
-	i18n      *i18n.Bundle
-	log       *slog.Logger
-	templates *template.Template
+	cfg            config.Config
+	store          *redisstore.Store
+	files          *storage.Local
+	i18n           *i18n.Bundle
+	log            *slog.Logger
+	templates      *template.Template
+	trustedProxies []*net.IPNet
 }
 
 const appVersion = "v1.0.0"
@@ -114,12 +116,16 @@ func New(cfg config.Config, store *redisstore.Store, files *storage.Local, bundl
 	if err != nil {
 		return nil, err
 	}
-	return &App{cfg: cfg, store: store, files: files, i18n: bundle, log: log, templates: t}, nil
+	trustedProxies, err := parseTrustedProxies(cfg.TrustedProxies)
+	if err != nil {
+		return nil, err
+	}
+	return &App{cfg: cfg, store: store, files: files, i18n: bundle, log: log, templates: t, trustedProxies: trustedProxies}, nil
 }
 
 func (a *App) Routes() http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.RealIP, middleware.RequestID, middleware.Recoverer, a.securityHeaders, ratelimit.New(a.cfg.RateLimitPerMinute).Middleware, a.csrfMiddleware)
+	r.Use(a.trustedProxyMiddleware, middleware.RequestID, middleware.Recoverer, a.securityHeaders, ratelimit.New(a.cfg.RateLimitPerMinute).Middleware, a.csrfMiddleware)
 	r.Get("/static/*", func(w http.ResponseWriter, r *http.Request) {
 		http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))).ServeHTTP(w, r)
 	})
@@ -783,6 +789,76 @@ func csrfCookie(r *http.Request) string {
 		return ""
 	}
 	return c.Value
+}
+
+func parseTrustedProxies(values []string) ([]*net.IPNet, error) {
+	proxies := make([]*net.IPNet, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if strings.Contains(value, "/") {
+			_, network, err := net.ParseCIDR(value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid trusted proxy %q", value)
+			}
+			proxies = append(proxies, network)
+			continue
+		}
+		ip := net.ParseIP(value)
+		if ip == nil {
+			return nil, fmt.Errorf("invalid trusted proxy %q", value)
+		}
+		bits := 32
+		if ip.To4() == nil {
+			bits = 128
+		}
+		proxies = append(proxies, &net.IPNet{IP: ip, Mask: net.CIDRMask(bits, bits)})
+	}
+	return proxies, nil
+}
+
+func (a *App) trustedProxyMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if len(a.trustedProxies) == 0 || !a.remoteAddrIsTrusted(r.RemoteAddr) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if ip := firstForwardedIP(r.Header.Get("X-Forwarded-For")); ip != nil {
+			r.RemoteAddr = net.JoinHostPort(ip.String(), "0")
+		} else if ip := net.ParseIP(strings.TrimSpace(r.Header.Get("X-Real-IP"))); ip != nil {
+			r.RemoteAddr = net.JoinHostPort(ip.String(), "0")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (a *App) remoteAddrIsTrusted(remoteAddr string) bool {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		host = remoteAddr
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	for _, proxy := range a.trustedProxies {
+		if proxy.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+func firstForwardedIP(header string) net.IP {
+	for _, part := range strings.Split(header, ",") {
+		ip := net.ParseIP(strings.TrimSpace(part))
+		if ip != nil {
+			return ip
+		}
+	}
+	return nil
 }
 
 func (a *App) audit(r *http.Request, event, target, result, details string) {

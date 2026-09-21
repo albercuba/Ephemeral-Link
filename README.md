@@ -108,7 +108,7 @@ ENCRYPTION_MASTER_KEY=base64:REPLACE_WITH_GENERATED_32_BYTE_BASE64_VALUE
 
 Do not reuse the example value above. If you change `ENCRYPTION_MASTER_KEY`, existing encrypted secrets and files can no longer be decrypted.
 
-`docker compose up` also works without a `.env` file for local testing, but production must use a strong unique `ENCRYPTION_MASTER_KEY`.
+`ENCRYPTION_MASTER_KEY` is required in all environments. The app will refuse to start without a strong unique key.
 
 ## Local development
 
@@ -145,6 +145,7 @@ go test ./...
 | `MAX_TTL_SECONDS` | Upper bound for allowed expiry. Defaults to 30 days. |
 | `ENCRYPTION_MASTER_KEY` | Required base64-encoded 32-byte master key, optionally prefixed with `base64:`. |
 | `RATE_LIMIT_PER_MINUTE` | Per-IP request limit. |
+| `TRUSTED_PROXIES` | Optional comma-separated trusted reverse proxy IPs/CIDRs. `X-Forwarded-For` and `X-Real-IP` are ignored unless the direct peer is trusted. |
 | `ALLOWED_LANGUAGES` | Comma-separated language list, default `en,de`. |
 | `DEFAULT_LANGUAGE` | Default UI language, default `en`. |
 | `SECURE_COOKIES` | Set `true` behind HTTPS in production. |
@@ -162,6 +163,7 @@ Minimum production requirements:
 - Put the app behind Caddy, Nginx, or another HTTPS reverse proxy.
 - Set `APP_BASE_URL` to the public HTTPS URL.
 - Set `SECURE_COOKIES=true` when serving over HTTPS.
+- Set `TRUSTED_PROXIES` to your reverse proxy IP/CIDR if rate limits and audit IPs should use forwarded client addresses.
 - Generate a strong master key and keep it secret. Losing it makes stored encrypted payloads unrecoverable.
 - Complete the first-run `/setup` flow with a strong administrator password before exposing the app broadly.
 - Do not log generated links, passphrases, or payloads.

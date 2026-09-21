@@ -86,9 +86,11 @@ local k = KEYS[1]
 if redis.call('EXISTS', k) == 0 then return nil end
 local st = redis.call('HGET', k, 'status')
 if st ~= 'available' then return nil end
+local item = redis.call('HGETALL', k)
 redis.call('HSET', k, 'status', 'consumed', 'consumed_at', ARGV[1])
+redis.call('HDEL', k, 'wrapped_key_nonce', 'wrapped_key_ciphertext', 'payload_nonce', 'payload_ciphertext', 'storage_object_path')
 redis.call('EXPIRE', k, ARGV[2])
-return redis.call('HGETALL', k)
+return item
 `)
 
 func (s *Store) Claim(ctx context.Context, id string) (Item, error) {

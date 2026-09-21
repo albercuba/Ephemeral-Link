@@ -22,6 +22,7 @@ type Config struct {
 	AllowedLanguages   []string
 	DefaultLanguage    string
 	SecureCookies      bool
+	TrustedProxies     []string
 }
 
 func Load() (Config, error) {
@@ -37,20 +38,33 @@ func Load() (Config, error) {
 		AllowedLanguages:   split(env("ALLOWED_LANGUAGES", "en,de")),
 		DefaultLanguage:    env("DEFAULT_LANGUAGE", "en"),
 		SecureCookies:      strings.EqualFold(env("SECURE_COOKIES", "false"), "true"),
+		TrustedProxies:     split(env("TRUSTED_PROXIES", "")),
 	}
 	key, err := loadMasterKey(env("ENCRYPTION_MASTER_KEY", ""))
-	if err != nil { return cfg, err }
+	if err != nil {
+		return cfg, err
+	}
 	cfg.EncryptionMasterKey = key
-	if cfg.DefaultTTL <= 0 || cfg.MaxTTL <= 0 || cfg.DefaultTTL > cfg.MaxTTL { return cfg, errors.New("invalid TTL configuration") }
+	if cfg.DefaultTTL <= 0 || cfg.MaxTTL <= 0 || cfg.DefaultTTL > cfg.MaxTTL {
+		return cfg, errors.New("invalid TTL configuration")
+	}
 	return cfg, nil
 }
 
 func loadMasterKey(raw string) ([]byte, error) {
-	if raw == "" { return nil, errors.New("ENCRYPTION_MASTER_KEY is required; use 32 random bytes base64-encoded") }
-	if strings.HasPrefix(raw, "base64:") { raw = strings.TrimPrefix(raw, "base64:") }
+	if raw == "" {
+		return nil, errors.New("ENCRYPTION_MASTER_KEY is required; use 32 random bytes base64-encoded")
+	}
+	if strings.HasPrefix(raw, "base64:") {
+		raw = strings.TrimPrefix(raw, "base64:")
+	}
 	key, err := base64.StdEncoding.DecodeString(raw)
-	if err != nil { return nil, errors.New("ENCRYPTION_MASTER_KEY must be base64 encoded") }
-	if len(key) != 32 { return nil, errors.New("ENCRYPTION_MASTER_KEY must decode to exactly 32 bytes") }
+	if err != nil {
+		return nil, errors.New("ENCRYPTION_MASTER_KEY must be base64 encoded")
+	}
+	if len(key) != 32 {
+		return nil, errors.New("ENCRYPTION_MASTER_KEY must decode to exactly 32 bytes")
+	}
 	return key, nil
 }
 
