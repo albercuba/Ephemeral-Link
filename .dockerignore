@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.env.*
+data
+coverage.out
+*.log
+Dockerfile*
+docker-compose*.yml
+docs
+README.md
+AGENTS.md
+.agents
+.vscode
+.idea

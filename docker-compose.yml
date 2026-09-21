@@ -11,13 +11,27 @@ services:
       MAX_FILE_SIZE: ${MAX_FILE_SIZE:-10485760}
       DEFAULT_TTL_SECONDS: ${DEFAULT_TTL_SECONDS:-3600}
       MAX_TTL_SECONDS: ${MAX_TTL_SECONDS:-2592000}
-      ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY:-base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
+      ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY:?Set ENCRYPTION_MASTER_KEY to a base64-encoded 32-byte key}
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
       ALLOWED_LANGUAGES: ${ALLOWED_LANGUAGES:-en,de}
       DEFAULT_LANGUAGE: ${DEFAULT_LANGUAGE:-en}
       SECURE_COOKIES: ${SECURE_COOKIES:-false}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
     volumes:
       - app_storage:/app/data/storage
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
     depends_on:
       redis:
         condition: service_healthy

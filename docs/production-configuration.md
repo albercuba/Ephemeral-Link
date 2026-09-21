@@ -12,6 +12,7 @@ Before exposing the app publicly:
 - Complete the first-run `/setup` flow with a strong administrator password before exposing the app broadly.
 - Persist both Redis/Valkey data and `STORAGE_PATH` using Docker volumes or equivalent storage.
 - Keep `STORAGE_PATH` outside the public web root.
+- Ensure `ENCRYPTION_MASTER_KEY` is set before running Compose; the included Compose file intentionally fails fast if it is missing.
 - Keep `MAX_FILE_SIZE` conservative unless memory and disk limits are sized for larger uploads/downloads.
 - Configure SMTP or Microsoft Graph only if upload-request emails/notifications are needed.
 - Put the container behind a reverse proxy that terminates TLS and forwards the original client IP.
@@ -23,6 +24,8 @@ The included `docker-compose.yml` runs two services:
 
 - `app`: the Go web server, listening on port `8080` in the container.
 - `redis`: Valkey 8 with append-only persistence enabled.
+
+The `app` service runs as the non-root user baked into the image, uses a read-only root filesystem, drops Linux capabilities, enables `no-new-privileges`, mounts only `/app/data/storage` as persistent writable storage, and uses a small `/tmp` tmpfs for multipart parsing scratch space. Keep uploaded files and branding assets under `STORAGE_PATH`; do not make the application source tree writable in production.
 
 It also creates two named volumes:
 
@@ -62,11 +65,11 @@ Generate a key:
 printf 'ENCRYPTION_MASTER_KEY=base64:%s\n' "$(openssl rand -base64 32)"
 ```
 
-Set this in your production environment or `.env` file.
+Set this in your production environment or `.env` file before running Docker Compose. The included Compose file uses required-variable interpolation so startup fails if the key is missing.
 
 Important:
 
-- Do not use the default Compose fallback value in production.
+- Do not add a default/fallback master key to Compose, deployment manifests, or source control.
 - Do not rotate this key while active links still need to be decrypted.
 - If the key is lost or changed, existing encrypted text and file payloads cannot be decrypted.
 - Do not paste this key into logs, tickets, screenshots, or source control.
@@ -86,6 +89,7 @@ Important:
 | `ALLOWED_LANGUAGES` | Comma-separated UI languages, currently `en,de` by default. |
 | `DEFAULT_LANGUAGE` | Keep `en` unless intentionally changed. |
 | `SECURE_COOKIES` | Set to `true` when served via HTTPS. |
+| `TRUSTED_PROXIES` | Comma-separated proxy IPs/CIDRs allowed to supply `X-Forwarded-For` / `X-Real-IP`. Leave empty when no trusted reverse proxy is in front of the app. |
 
 ## Reverse proxy and TLS
 
@@ -96,6 +100,7 @@ Recommended proxy behavior:
 - Terminate HTTPS at the proxy.
 - Forward traffic to the app on the private Docker/network port.
 - Set `X-Forwarded-For` so rate limiting sees the original client IP.
+- Add only the reverse proxy's private IP/CIDR to `TRUSTED_PROXIES`; never trust arbitrary client-supplied forwarding headers.
 - Enforce a request body size at or slightly above `MAX_FILE_SIZE` plus overhead.
 - Set reasonable read/write timeouts for file uploads and downloads.
 

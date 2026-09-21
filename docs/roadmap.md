@@ -82,11 +82,11 @@ Status: implemented in `internal/web/auth.go` and `internal/redisstore/store.go`
 
 ### 2.2 Replace hand-rolled JWT validation
 
-- [ ] Replace custom JWT/JWKS validation with a maintained library or hardened verifier.
-- [ ] Validate issuer, audience, expiry, algorithm, key ID, and nonce where applicable.
+- [x] Replace custom JWT/JWKS validation with a maintained library or hardened verifier.
+- [x] Validate issuer, audience, expiry, algorithm, key ID, and nonce where applicable.
 - [ ] Add tests for invalid audience/issuer/expiry/signature.
 
-Status: not started.
+Status: hardened verifier in `internal/web/auth.go` validates RS256, key ID, RSA signing keys, issuer, audience, expiry, not-before, signature, and nonce where applicable; tests still needed.
 
 ### 2.3 Remove `KEYS` from hot paths
 
@@ -98,11 +98,12 @@ Status: implemented with cursor-based `SCAN` in `internal/redisstore/store.go`; 
 
 ### 2.4 Stop putting the secret link into URLs
 
-- [ ] Avoid exposing generated links in query strings where possible.
-- [ ] Avoid leaking generated links via Referer headers, logs, or browser history.
-- [ ] Update templates and email flows without logging full links.
+- [x] Avoid exposing generated links in query strings where possible.
+- [x] Avoid leaking generated links via Referer headers, logs, or browser history.
+- [x] Update templates and email flows without logging full links.
+- [ ] Add receipt-flow tests for `/created`.
 
-Status: not started.
+Status: implemented with short-lived server-side created-link receipts and an opaque `/created` cookie; tests still needed.
 
 ### 2.5 Response headers: no-store and HSTS
 
@@ -153,11 +154,12 @@ Status: implemented route-aware POST body caps in `internal/web/server.go`; test
 
 ### 3.1 Docker / Compose hardening
 
-- [ ] Review container user, filesystem permissions, health checks, and restart policy.
-- [ ] Avoid unnecessary writable paths.
-- [ ] Document production Compose settings.
+- [x] Review container user, filesystem permissions, health checks, and restart policy.
+- [x] Avoid unnecessary writable paths.
+- [x] Document production Compose settings.
+- [ ] Validate hardened Compose config in Docker.
 
-Status: not started.
+Status: implemented app service hardening in `docker-compose.yml` with read-only root filesystem, `/tmp` tmpfs, dropped capabilities, no-new-privileges, healthcheck, and required `ENCRYPTION_MASTER_KEY`; Docker validation still needed.
 
 ### 3.2 File handling improvements
 

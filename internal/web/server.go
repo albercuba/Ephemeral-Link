@@ -43,6 +43,8 @@ type App struct {
 
 const appVersion = "v1.0.0"
 const encryptedSecretPrefix = "enc:v1:"
+const createdReceiptCookieName = "ephemeral_created_receipt"
+const createdReceiptTTL = 10 * time.Minute
 const maxFormBodySize int64 = 1024 * 1024
 const maxLogoBodySize int64 = 2 * 1024 * 1024
 
@@ -201,17 +203,25 @@ func (a *App) terms(w http.ResponseWriter, r *http.Request) {
 	a.render(w, r, 200, "terms.html", Page{Title: a.t(r, "terms_title")})
 }
 func (a *App) created(w http.ResponseWriter, r *http.Request) {
-	link := r.URL.Query().Get("link")
-	ttl, _ := strconv.ParseInt(r.URL.Query().Get("ttl"), 10, 64)
-	expiresAt := r.URL.Query().Get("expires")
+	cookie, err := r.Cookie(createdReceiptCookieName)
+	if err != nil || cookie.Value == "" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	receipt, err := a.store.GetCreatedReceipt(r.Context(), cookie.Value)
+	if err != nil || receipt.Link == "" {
+		http.SetCookie(w, &http.Cookie{Name: createdReceiptCookieName, Value: "", Path: "/created", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: a.cfg.SecureCookies})
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 	message := ""
-	switch r.URL.Query().Get("email") {
+	switch receipt.EmailStatus {
 	case "sent":
 		message = a.t(r, "created_email_sent")
 	case "failed":
 		message = a.t(r, "created_email_failed")
 	}
-	a.render(w, r, 200, "created.html", Page{Title: a.t(r, "created_title"), Link: link, ID: displayCodeFromLink(link), ExpiresAt: expiresAt, Size: ttl, Message: message})
+	a.render(w, r, 200, "created.html", Page{Title: a.t(r, "created_title"), Link: receipt.Link, ID: displayCodeFromLink(receipt.Link), ExpiresAt: receipt.ExpiresAt, Size: receipt.TTLSeconds, Message: message})
 }
 func (a *App) language(w http.ResponseWriter, r *http.Request) {
 	lang := a.i18n.Normalize(r.FormValue("language"))
@@ -735,13 +745,18 @@ func (a *App) sendCreatedLinkIfRequested(w http.ResponseWriter, r *http.Request,
 
 func (a *App) redirectCreated(w http.ResponseWriter, r *http.Request, path string, item redisstore.Item, emailStatus string) {
 	link := strings.TrimRight(a.cfg.AppBaseURL, "/") + path
-	ttl := item.ExpiresAt - item.CreatedAt
-	expires := time.Unix(item.ExpiresAt, 0).Format(time.RFC1123)
-	target := "/created?link=" + template.URLQueryEscaper(link) + "&expires=" + template.URLQueryEscaper(expires) + "&ttl=" + strconv.FormatInt(ttl, 10)
-	if emailStatus != "" {
-		target += "&email=" + template.URLQueryEscaper(emailStatus)
+	token, err := sec.Token()
+	if err != nil {
+		a.bad(w, r, err)
+		return
 	}
-	http.Redirect(w, r, target, 303)
+	receipt := redisstore.CreatedReceipt{Token: token, Link: link, ExpiresAt: time.Unix(item.ExpiresAt, 0).Format(time.RFC1123), TTLSeconds: item.ExpiresAt - item.CreatedAt, EmailStatus: emailStatus}
+	if err := a.store.SaveCreatedReceipt(r.Context(), receipt, createdReceiptTTL); err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{Name: createdReceiptCookieName, Value: token, Path: "/created", MaxAge: int(createdReceiptTTL.Seconds()), HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: a.cfg.SecureCookies})
+	http.Redirect(w, r, "/created", 303)
 }
 func (a *App) render(w http.ResponseWriter, r *http.Request, status int, name string, p Page) {
 	lang := a.lang(r)

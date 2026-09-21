@@ -814,6 +814,7 @@ type microsoftClaims struct {
 	Audience          string            `json:"aud"`
 	Issuer            string            `json:"iss"`
 	Expires           int64             `json:"exp"`
+	NotBefore         int64             `json:"nbf"`
 	Nonce             string            `json:"nonce"`
 	Subject           string            `json:"sub"`
 	ObjectID          string            `json:"oid"`
@@ -938,6 +939,9 @@ func validateMicrosoftJWT(ctx context.Context, cfg redisstore.IntegrationConfig,
 	if header.Alg != "RS256" {
 		return microsoftClaims{}, fmt.Errorf("unsupported alg")
 	}
+	if strings.TrimSpace(header.Kid) == "" {
+		return microsoftClaims{}, fmt.Errorf("missing key id")
+	}
 	key, err := microsoftSigningKey(ctx, cfg, header.Kid)
 	if err != nil {
 		return microsoftClaims{}, err
@@ -955,8 +959,12 @@ func validateMicrosoftJWT(ctx context.Context, cfg redisstore.IntegrationConfig,
 	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
 		return claims, err
 	}
-	if time.Now().Unix() >= claims.Expires {
+	now := time.Now().Unix()
+	if now >= claims.Expires {
 		return claims, fmt.Errorf("expired token")
+	}
+	if claims.NotBefore != 0 && now+300 < claims.NotBefore {
+		return claims, fmt.Errorf("token not yet valid")
 	}
 	expectedIssuer := "https://login.microsoftonline.com/" + strings.TrimSpace(cfg.MicrosoftTenantID) + "/v2.0"
 	legacyIssuer := "https://sts.windows.net/" + strings.TrimSpace(cfg.MicrosoftTenantID) + "/"
@@ -987,6 +995,9 @@ func microsoftSigningKey(ctx context.Context, cfg redisstore.IntegrationConfig, 
 	}
 	for _, k := range jwks.Keys {
 		if k.Kid == kid {
+			if k.Kty != "RSA" || (k.Use != "" && k.Use != "sig") {
+				return nil, fmt.Errorf("unsupported signing key")
+			}
 			return jwkToRSA(k)
 		}
 	}

@@ -44,6 +44,14 @@ type AuditEvent struct {
 	Details   string
 }
 
+type CreatedReceipt struct {
+	Token       string
+	Link        string
+	ExpiresAt   string
+	TTLSeconds  int64
+	EmailStatus string
+}
+
 type Store struct{ rdb *redis.Client }
 
 func New(url string) (*Store, error) {
@@ -72,9 +80,10 @@ func (s *Store) scanKeys(ctx context.Context, pattern string) ([]string, error) 
 	}
 }
 
-func key(id string) string { return "el:item:" + id }
+func key(id string) string                       { return "el:item:" + id }
 func uploadRequestKey(id string) string         { return "el:upload_request:" + id }
 func auditKey(id string) string                 { return "el:audit:" + id }
+func createdReceiptKey(token string) string     { return "el:created_receipt:" + token }
 
 const auditIndexKey = "el:audit:index"
 
@@ -291,6 +300,25 @@ func (s *Store) GetSession(ctx context.Context, token string) (string, error) {
 }
 func (s *Store) DeleteSession(ctx context.Context, token string) error {
 	return s.rdb.Del(ctx, sessionKey(token)).Err()
+}
+
+func (s *Store) SaveCreatedReceipt(ctx context.Context, receipt CreatedReceipt, ttl time.Duration) error {
+	pipe := s.rdb.TxPipeline()
+	pipe.HSet(ctx, createdReceiptKey(receipt.Token), map[string]any{"link": receipt.Link, "expires_at": receipt.ExpiresAt, "ttl_seconds": receipt.TTLSeconds, "email_status": receipt.EmailStatus})
+	pipe.Expire(ctx, createdReceiptKey(receipt.Token), ttl)
+	_, err := pipe.Exec(ctx)
+	return err
+}
+
+func (s *Store) GetCreatedReceipt(ctx context.Context, token string) (CreatedReceipt, error) {
+	m, err := s.rdb.HGetAll(ctx, createdReceiptKey(token)).Result()
+	if err != nil {
+		return CreatedReceipt{}, err
+	}
+	if len(m) == 0 {
+		return CreatedReceipt{}, ErrGone
+	}
+	return CreatedReceipt{Token: token, Link: m["link"], ExpiresAt: m["expires_at"], TTLSeconds: i64(m["ttl_seconds"]), EmailStatus: m["email_status"]}, nil
 }
 
 func throttleKey(scope, identity string) string {

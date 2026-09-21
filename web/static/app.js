@@ -582,11 +582,8 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  function detailURL(receipt) {
-    const params = new URLSearchParams({ link: receipt.link });
-    if (receipt.expires) params.set("expires", receipt.expires);
-    if (receipt.ttl) params.set("ttl", receipt.ttl);
-    return "/created?" + params.toString();
+  function detailURL() {
+    return "";
   }
 
   function addCurrentCreatedReceipt() {
@@ -711,7 +708,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     list.querySelectorAll(".history-item").forEach((item) => {
       item.addEventListener("click", () => {
-        window.location.href = item.dataset.detail;
+        if (item.dataset.detail) window.location.href = item.dataset.detail;
       });
     });
     list.querySelectorAll("[data-history-copy]").forEach((btn) => {
