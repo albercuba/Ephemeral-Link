@@ -118,10 +118,10 @@ Status: implemented in `internal/web/server.go`; tests still needed.
 
 - [ ] Remove production dependencies on external font/icon/script CDNs.
 - [ ] Self-host required static assets.
-- [ ] Tighten CSP after external assets are removed.
-- [ ] Update third-party notices.
+- [x] Tighten CSP after external font/icon assets are removed.
+- [x] Update third-party notices.
 
-Status: not started.
+Status: partially implemented; external Google Fonts and Font Awesome stylesheets were removed and replaced with local CSS/system-font fallbacks. MSAL is still loaded from Microsoft/jsDelivr CDNs until a reviewed self-hosted vendor asset is added.
 
 ### 2.7 Encrypt integration secrets at rest
 

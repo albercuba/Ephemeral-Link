@@ -14,18 +14,11 @@ Ephemeral Link is licensed under the MIT License. This file summarizes notable t
 ## Browser libraries
 
 - Microsoft Authentication Library for JavaScript / `@azure/msal-browser` — MIT License
-  - Loaded from Microsoft CDN and/or jsDelivr for Microsoft Entra ID sign-in.
+  - Loaded from Microsoft CDN and/or jsDelivr for Microsoft Entra ID sign-in until a reviewed self-hosted vendor asset is added.
 
-## Fonts
+## Fonts and icons
 
-- Google Fonts `Share Tech Mono` — SIL Open Font License 1.1
-
-## Icons
-
-- Font Awesome Free — mixed licensing:
-  - Icons: Creative Commons Attribution 4.0 International License (CC BY 4.0)
-  - Fonts: SIL Open Font License 1.1
-  - Code: MIT License
+The production UI uses system fonts and local CSS fallback glyphs. It does not load Google Fonts or Font Awesome stylesheets.
 
 ## Project assets
 

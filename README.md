@@ -172,7 +172,7 @@ Minimum production requirements:
 
 ## Visual assets
 
-The UI uses the Google Font `Share Tech Mono`, which is distributed under the SIL Open Font License. Icons are loaded from Font Awesome Free. Font Awesome Free uses mixed licensing: icons are CC BY 4.0, fonts are SIL OFL 1.1, and code is MIT. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The UI uses system fonts and local CSS fallback glyphs so production pages do not depend on Google Fonts or Font Awesome CDNs. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Language behavior
 

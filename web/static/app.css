@@ -2215,3 +2215,29 @@ html[data-theme="dark"]
         position: static;
     }
 }
+/* Local icon fallbacks replace the previous Font Awesome CDN dependency. */
+.fa-solid {
+    display: inline-block;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.fa-moon::before { content: "◐"; }
+.fa-sun::before { content: "☀"; }
+.fa-language::before { content: "文"; }
+.fa-lock::before { content: "🔒"; }
+.fa-eye::before { content: "👁"; }
+.fa-copy::before { content: "⧉"; }
+.fa-circle-exclamation::before { content: "!"; }
+.fa-link::before { content: "🔗"; }
+.fa-file::before { content: "📄"; }
+.fa-upload::before { content: "↑"; }
+.fa-hard-drive::before { content: "▣"; }
+.fa-download::before { content: "↓"; }
+.fa-key::before { content: "⚿"; }
+.fa-check::before { content: "✓"; }
+.fa-stopwatch::before { content: "⏱"; }
+.fa-fire::before { content: "🔥"; }
+.fa-ban::before { content: "⊘"; }
+
