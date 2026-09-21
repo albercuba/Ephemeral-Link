@@ -113,7 +113,7 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	loginNoStore(w)
-	a.render(w, r, 200, "login.html", Page{Title: "Sign in"})
+	a.render(w, r, 200, "login.html", Page{Title: a.t(r, "sign_in")})
 }
 
 func (a *App) loginPost(w http.ResponseWriter, r *http.Request) {
@@ -128,7 +128,7 @@ func (a *App) loginPost(w http.ResponseWriter, r *http.Request) {
 	if limited {
 		a.audit(r, "local_login", username, "blocked", "too many failed attempts")
 		loginNoStore(w)
-		a.render(w, r, http.StatusTooManyRequests, "login.html", Page{Title: "Sign in", Error: a.t(r, "too_many_attempts")})
+		a.render(w, r, http.StatusTooManyRequests, "login.html", Page{Title: a.t(r, "sign_in"), Error: a.t(r, "too_many_attempts")})
 		return
 	}
 	user, err := a.store.GetUser(r.Context(), username)
@@ -141,12 +141,12 @@ func (a *App) loginPost(w http.ResponseWriter, r *http.Request) {
 		a.audit(r, "local_login", username, "failed", "invalid credentials")
 		loginNoStore(w)
 		status := http.StatusUnauthorized
-		errorMessage := "Invalid username or password."
+		errorMessage := a.t(r, "invalid_login")
 		if limited {
 			status = http.StatusTooManyRequests
 			errorMessage = a.t(r, "too_many_attempts")
 		}
-		a.render(w, r, status, "login.html", Page{Title: "Sign in", Error: errorMessage})
+		a.render(w, r, status, "login.html", Page{Title: a.t(r, "sign_in"), Error: errorMessage})
 		return
 	}
 	token, err := sec.Token()
@@ -204,19 +204,19 @@ func (a *App) microsoftPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !cfg.MicrosoftEnabled || cfg.MicrosoftTenantID == "" || cfg.MicrosoftClientID == "" || cfg.MicrosoftAudience == "" {
-		http.Error(w, "Microsoft Entra ID sign-in is not enabled or the required Tenant ID, Frontend Client ID, and Backend API Audience fields are incomplete.", http.StatusNotImplemented)
+		http.Error(w, a.t(r, "microsoft_login_not_configured"), http.StatusNotImplemented)
 		return
 	}
 	claims, err := validateMicrosoftAccessToken(r.Context(), cfg, r.FormValue("token"))
 	if err != nil {
 		a.audit(r, "microsoft_login", "microsoft", "failed", "token validation failed")
-		http.Error(w, "Microsoft token validation failed: "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, a.t(r, "microsoft_token_validation_failed"), http.StatusUnauthorized)
 		return
 	}
 	objectID := strings.TrimSpace(claims.ObjectID)
 	if objectID == "" {
 		a.audit(r, "microsoft_login", "microsoft", "failed", "missing oid claim")
-		http.Error(w, "Microsoft token is missing the required oid claim.", http.StatusUnauthorized)
+		http.Error(w, a.t(r, "microsoft_token_validation_failed"), http.StatusUnauthorized)
 		return
 	}
 	username := "entra:" + objectID
@@ -259,7 +259,7 @@ func (a *App) microsoftPost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) microsoftLogin(w http.ResponseWriter, r *http.Request) {
-	a.render(w, r, 400, "login.html", Page{Title: "Sign in", Error: "Microsoft login uses the browser MSAL flow. Please use the Sign in with Microsoft button."})
+	a.render(w, r, 400, "login.html", Page{Title: a.t(r, "sign_in"), Error: a.t(r, "microsoft_browser_flow_required")})
 }
 
 func (a *App) microsoftCallback(w http.ResponseWriter, r *http.Request) {
@@ -267,7 +267,7 @@ func (a *App) microsoftCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) adLogin(w http.ResponseWriter, r *http.Request) {
-	a.render(w, r, 501, "login.html", Page{Title: "Sign in", Error: "Local Active Directory sign-in is not configured yet. Sign in as admin and open Microsoft Local AD Integration to add the directory settings."})
+	a.render(w, r, 501, "login.html", Page{Title: a.t(r, "sign_in"), Error: a.t(r, "ad_login_not_configured")})
 }
 
 func (a *App) requireAuth(next http.Handler) http.Handler {

@@ -3,8 +3,26 @@ package storage
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+func TestSanitizeFilename(t *testing.T) {
+	tests := map[string]string{
+		"../../../secret.txt": "secret.txt",
+		" report?.csv ":       "report_.csv",
+		"...":                 "download.bin",
+		"":                    "download.bin",
+	}
+	for input, want := range tests {
+		if got := SanitizeFilename(input); got != want {
+			t.Fatalf("SanitizeFilename(%q) = %q, want %q", input, got, want)
+		}
+	}
+	if got := SanitizeFilename(strings.Repeat("a", 140) + ".txt"); len(got) != 120 {
+		t.Fatalf("long filename length = %d, want 120", len(got))
+	}
+}
 
 func TestCleanupOrphansDeletesOnlyInactiveBinFiles(t *testing.T) {
 	st, err := NewLocal(t.TempDir())

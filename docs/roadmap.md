@@ -163,19 +163,20 @@ Status: implemented app service hardening in `docker-compose.yml` with read-only
 
 ### 3.2 File handling improvements
 
-- [ ] Review whole-file buffering and memory growth risks.
-- [ ] Improve cleanup of orphaned encrypted files.
-- [ ] Add tests for filename sanitization and storage cleanup.
+- [x] Review whole-file buffering and memory growth risks.
+- [x] Improve cleanup of orphaned encrypted files.
+- [x] Add tests for filename sanitization and storage cleanup.
+- [ ] Replace whole-file buffering with streaming encryption/decryption for large files.
 
-Status: not started.
+Status: partially implemented; orphan cleanup already reconciles active Redis storage paths, local writes now remove failed temp files, and storage tests cover orphan cleanup and filename sanitization. Streaming file encryption/decryption remains future work.
 
 ### 3.3 i18n and error messages
 
 - [ ] Ensure every visible UI string comes from `locales/en.json` and `locales/de.json`.
-- [ ] Keep user-facing email copy localized.
-- [ ] Avoid leaking sensitive operational details in user-facing errors.
+- [x] Keep user-facing email copy localized.
+- [x] Avoid leaking sensitive operational details in user-facing errors.
 
-Status: not started.
+Status: in progress; login and Microsoft sign-in errors now use localized messages, and token validation failures no longer expose verifier details to users. A full template/string audit is still needed.
 
 ### 3.4 Code hygiene
 

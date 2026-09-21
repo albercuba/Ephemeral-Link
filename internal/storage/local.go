@@ -24,7 +24,11 @@ func (l *Local) Write(id string, data []byte) (string, error) {
 	if err := os.WriteFile(tmp, data, 0600); err != nil {
 		return "", err
 	}
-	return p, os.Rename(tmp, p)
+	if err := os.Rename(tmp, p); err != nil {
+		_ = os.Remove(tmp)
+		return "", err
+	}
+	return p, nil
 }
 func (l *Local) Read(path string) ([]byte, error) { return os.ReadFile(path) }
 func (l *Local) Delete(path string)               { _ = os.Remove(path) }
