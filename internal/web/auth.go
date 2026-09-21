@@ -213,15 +213,19 @@ func (a *App) microsoftPost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Microsoft token validation failed: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
-	username := strings.TrimSpace(claims.PreferredUsername)
-	if username == "" {
-		username = strings.TrimSpace(claims.Email)
+	objectID := strings.TrimSpace(claims.ObjectID)
+	if objectID == "" {
+		a.audit(r, "microsoft_login", "microsoft", "failed", "missing oid claim")
+		http.Error(w, "Microsoft token is missing the required oid claim.", http.StatusUnauthorized)
+		return
 	}
-	if username == "" {
-		username = strings.TrimSpace(claims.UPN)
+	username := "entra:" + objectID
+	email := strings.TrimSpace(claims.Email)
+	if email == "" {
+		email = strings.TrimSpace(claims.PreferredUsername)
 	}
-	if username == "" {
-		username = claims.Subject
+	if email == "" {
+		email = strings.TrimSpace(claims.UPN)
 	}
 	first, last := splitName(claims.Name)
 	existing, _ := a.store.GetUser(r.Context(), username)
@@ -235,7 +239,7 @@ func (a *App) microsoftPost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, a.t(r, "microsoft_group_access_denied"), http.StatusForbidden)
 		return
 	}
-	if err := a.store.SaveUser(r.Context(), redisstore.User{Username: username, PasswordHash: existing.PasswordHash, Role: role, FirstName: first, LastName: last, Email: claims.Email, CreatedAt: createdAt}); err != nil {
+	if err := a.store.SaveUser(r.Context(), redisstore.User{Username: username, PasswordHash: "", Role: role, FirstName: first, LastName: last, Email: email, AuthProvider: "microsoft", ExternalID: objectID, CreatedAt: createdAt}); err != nil {
 		a.bad(w, r, err)
 		return
 	}

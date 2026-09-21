@@ -72,12 +72,13 @@ Status: implemented in `internal/web/auth.go`; tests still needed.
 
 ### 2.1 Entra identity: key on `oid`, never merge with local accounts
 
-- [ ] Store Entra users under stable object ID (`oid`) instead of mutable usernames/emails.
-- [ ] Prevent accidental merge with local accounts.
-- [ ] Preserve display names/emails as metadata only.
+- [x] Store Entra users under stable object ID (`oid`) instead of mutable usernames/emails.
+- [x] Prevent accidental merge with local accounts.
+- [x] Preserve display names/emails as metadata only.
 - [ ] Add migration/compatibility handling for existing Entra users.
+- [ ] Add tests for Entra/local account separation.
 
-Status: not started.
+Status: implemented in `internal/web/auth.go` and `internal/redisstore/store.go`; migration and tests still needed.
 
 ### 2.2 Replace hand-rolled JWT validation
 
@@ -89,11 +90,11 @@ Status: not started.
 
 ### 2.3 Remove `KEYS` from hot paths
 
-- [ ] Find any Redis `KEYS` usage.
-- [ ] Replace with indexes or `SCAN`-based iteration.
+- [x] Find any Redis `KEYS` usage.
+- [x] Replace with indexes or `SCAN`-based iteration.
 - [ ] Add tests for list/search behavior.
 
-Status: not started.
+Status: implemented with cursor-based `SCAN` in `internal/redisstore/store.go`; tests still needed.
 
 ### 2.4 Stop putting the secret link into URLs
 
@@ -105,11 +106,12 @@ Status: not started.
 
 ### 2.5 Response headers: no-store and HSTS
 
-- [ ] Add `Cache-Control: no-store` for sensitive pages/responses.
-- [ ] Add HSTS when serving behind HTTPS / secure cookies.
+- [x] Add `Cache-Control: no-store` for sensitive pages/responses.
+- [x] Add HSTS when serving behind HTTPS / secure cookies.
 - [ ] Verify headers on reveal, download, login, setup, and admin pages.
+- [ ] Add security header tests.
 
-Status: not started.
+Status: implemented in `internal/web/server.go`; tests still needed.
 
 ### 2.6 Self-host fonts, icons and MSAL; tighten the CSP
 

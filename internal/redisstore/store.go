@@ -55,7 +55,24 @@ func New(url string) (*Store, error) {
 }
 func (s *Store) Ping(ctx context.Context) error { return s.rdb.Ping(ctx).Err() }
 func (s *Store) Close() error                   { return s.rdb.Close() }
-func key(id string) string                      { return "el:item:" + id }
+
+func (s *Store) scanKeys(ctx context.Context, pattern string) ([]string, error) {
+	var cursor uint64
+	keys := []string{}
+	for {
+		batch, next, err := s.rdb.Scan(ctx, cursor, pattern, 100).Result()
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, batch...)
+		cursor = next
+		if cursor == 0 {
+			return keys, nil
+		}
+	}
+}
+
+func key(id string) string { return "el:item:" + id }
 func uploadRequestKey(id string) string         { return "el:upload_request:" + id }
 func auditKey(id string) string                 { return "el:audit:" + id }
 
@@ -143,6 +160,8 @@ type User struct {
 	FirstName    string
 	LastName     string
 	Email        string
+	AuthProvider string
+	ExternalID   string
 	CreatedAt    int64
 }
 
@@ -216,7 +235,7 @@ func (s *Store) GetUser(ctx context.Context, username string) (User, error) {
 	return userFromMap(m), nil
 }
 func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
-	keys, err := s.rdb.Keys(ctx, "el:user:*").Result()
+	keys, err := s.scanKeys(ctx, "el:user:*")
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +334,7 @@ func (s *Store) ResetFailures(ctx context.Context, scope, identity string) error
 }
 
 func (s *Store) ListAvailableItems(ctx context.Context) ([]Item, error) {
-	keys, err := s.rdb.Keys(ctx, "el:item:*").Result()
+	keys, err := s.scanKeys(ctx, "el:item:*")
 	if err != nil {
 		return nil, err
 	}
@@ -330,7 +349,7 @@ func (s *Store) ListAvailableItems(ctx context.Context) ([]Item, error) {
 	return out, nil
 }
 func (s *Store) ActiveStorageObjectPaths(ctx context.Context) (map[string]struct{}, error) {
-	keys, err := s.rdb.Keys(ctx, "el:item:*").Result()
+	keys, err := s.scanKeys(ctx, "el:item:*")
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +386,7 @@ func (s *Store) GetUploadRequest(ctx context.Context, id string) (UploadRequest,
 	return uploadRequestFromMap(m, err)
 }
 func (s *Store) ListAvailableUploadRequests(ctx context.Context) ([]UploadRequest, error) {
-	keys, err := s.rdb.Keys(ctx, "el:upload_request:*").Result()
+	keys, err := s.scanKeys(ctx, "el:upload_request:*")
 	if err != nil {
 		return nil, err
 	}
@@ -463,10 +482,10 @@ func (s *Store) ListAuditEvents(ctx context.Context, limit int64) ([]AuditEvent,
 }
 
 func userMap(user User) map[string]any {
-	return map[string]any{"username": user.Username, "password_hash": user.PasswordHash, "role": user.Role, "first_name": user.FirstName, "last_name": user.LastName, "email": user.Email, "created_at": user.CreatedAt}
+	return map[string]any{"username": user.Username, "password_hash": user.PasswordHash, "role": user.Role, "first_name": user.FirstName, "last_name": user.LastName, "email": user.Email, "auth_provider": user.AuthProvider, "external_id": user.ExternalID, "created_at": user.CreatedAt}
 }
 func userFromMap(m map[string]string) User {
-	return User{Username: m["username"], PasswordHash: m["password_hash"], Role: m["role"], FirstName: m["first_name"], LastName: m["last_name"], Email: m["email"], CreatedAt: i64(m["created_at"])}
+	return User{Username: m["username"], PasswordHash: m["password_hash"], Role: m["role"], FirstName: m["first_name"], LastName: m["last_name"], Email: m["email"], AuthProvider: m["auth_provider"], ExternalID: m["external_id"], CreatedAt: i64(m["created_at"])}
 }
 func auditEventFromMap(m map[string]string) AuditEvent {
 	return AuditEvent{ID: m["id"], CreatedAt: i64(m["created_at"]), Actor: m["actor"], IP: m["ip"], Event: m["event"], Target: m["target"], Result: m["result"], Details: m["details"]}
