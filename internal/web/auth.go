@@ -181,7 +181,7 @@ func (a *App) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) microsoftConfig(w http.ResponseWriter, r *http.Request) {
-	cfg, err := a.store.GetIntegrationConfig(r.Context())
+	cfg, err := a.getIntegrationConfig(r.Context())
 	if err != nil {
 		a.bad(w, r, err)
 		return
@@ -198,7 +198,7 @@ func (a *App) microsoftConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) microsoftPost(w http.ResponseWriter, r *http.Request) {
-	cfg, err := a.store.GetIntegrationConfig(r.Context())
+	cfg, err := a.getIntegrationConfig(r.Context())
 	if err != nil {
 		a.bad(w, r, err)
 		return
@@ -338,7 +338,7 @@ func (a *App) admin(w http.ResponseWriter, r *http.Request) {
 		a.bad(w, r, err)
 		return
 	}
-	integration, err := a.store.GetIntegrationConfig(r.Context())
+	integration, err := a.getIntegrationConfig(r.Context())
 	if err != nil {
 		a.bad(w, r, err)
 		return
@@ -655,7 +655,7 @@ func (a *App) adminSaveIntegrations(w http.ResponseWriter, r *http.Request) {
 	if _, ok := a.requireAdmin(w, r); !ok {
 		return
 	}
-	cfg, _ := a.store.GetIntegrationConfig(r.Context())
+	cfg, _ := a.getIntegrationConfig(r.Context())
 	switch r.FormValue("section") {
 	case "microsoft":
 		cfg.MicrosoftEnabled = r.FormValue("microsoft_enabled") == "on"
@@ -692,7 +692,7 @@ func (a *App) adminSaveIntegrations(w http.ResponseWriter, r *http.Request) {
 		}
 		cfg.GraphSender = strings.TrimSpace(r.FormValue("graph_sender"))
 	}
-	if err := a.store.SaveIntegrationConfig(r.Context(), cfg); err != nil {
+	if err := a.saveIntegrationConfig(r.Context(), cfg); err != nil {
 		a.bad(w, r, err)
 		return
 	}

@@ -651,6 +651,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const getFileLabel = section?.dataset.getFileLabel || "Get file";
     const waitingFileLabel =
       section?.dataset.waitingFileLabel || "Waiting for file";
+    const csrf = section?.dataset.csrf || "";
     if (!list) return;
     const receipts = getReceipts();
     if (count)
@@ -728,8 +729,18 @@ document.addEventListener("DOMContentLoaded", () => {
     list.querySelectorAll("[data-receive-status]").forEach((btn) => {
       btn.addEventListener("click", (event) => {
         event.stopPropagation();
-        if (btn.disabled || !btn.dataset.historyDownload) return;
-        window.location.href = btn.dataset.historyDownload;
+        if (btn.disabled || !btn.dataset.historyDownload || !csrf) return;
+        const form = document.createElement("form");
+        form.method = "post";
+        form.action = btn.dataset.historyDownload;
+        form.hidden = true;
+        const token = document.createElement("input");
+        token.type = "hidden";
+        token.name = "csrf";
+        token.value = csrf;
+        form.appendChild(token);
+        document.body.appendChild(form);
+        form.submit();
       });
     });
   }

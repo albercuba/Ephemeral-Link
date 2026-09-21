@@ -66,7 +66,7 @@ func (a *App) sendEmailContent(ctx context.Context, to, subject string, content 
 		return ctx.Err()
 	default:
 	}
-	cfg, err := a.store.GetIntegrationConfig(ctx)
+	cfg, err := a.getIntegrationConfig(ctx)
 	if err != nil {
 		return err
 	}

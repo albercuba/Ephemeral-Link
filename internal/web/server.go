@@ -42,6 +42,9 @@ type App struct {
 }
 
 const appVersion = "v1.0.0"
+const encryptedSecretPrefix = "enc:v1:"
+const maxFormBodySize int64 = 1024 * 1024
+const maxLogoBodySize int64 = 2 * 1024 * 1024
 
 type Page struct {
 	Title, Lang, CSRF, Error, Link, ID, Kind, Secret, Filename, Mime, Message, LogoURL, Version string
@@ -161,7 +164,7 @@ func (a *App) Routes() http.Handler {
 		r.Post("/secrets/file", a.createFile)
 		r.Post("/upload-requests", a.createUploadRequest)
 		r.Get("/upload-requests/{id}/status", a.uploadRequestStatus)
-		r.Get("/upload-requests/{id}/download", a.downloadUploadRequestFile)
+		r.Post("/upload-requests/{id}/download", a.downloadUploadRequestFile)
 		r.Get("/created", a.created)
 		r.Get("/admin", a.admin)
 		r.Get("/admin/audit.csv", a.adminAuditCSV)
@@ -756,7 +759,7 @@ func (a *App) render(w http.ResponseWriter, r *http.Request, status int, name st
 	if _, err := os.Stat(a.logoPath()); err == nil {
 		p.LogoURL = "/brand/logo"
 	}
-	if cfg, err := a.store.GetIntegrationConfig(r.Context()); err == nil {
+	if cfg, err := a.getIntegrationConfig(r.Context()); err == nil {
 		p.EmailConfigured = cfg.SMTPEnabled || cfg.GraphEnabled
 		p.MicrosoftLoginEnabled = cfg.MicrosoftEnabled && cfg.MicrosoftTenantID != "" && cfg.MicrosoftClientID != "" && cfg.MicrosoftAudience != ""
 		p.ADLoginEnabled = cfg.ADEnabled && cfg.ADHost != "" && cfg.ADBaseDN != ""
@@ -817,14 +820,37 @@ func (a *App) securityHeaders(next http.Handler) http.Handler {
 func (a *App) csrfMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			r.Body = http.MaxBytesReader(w, r.Body, a.cfg.MaxFileSize+1024*1024)
-			if r.FormValue("csrf") == "" || r.FormValue("csrf") != csrfCookie(r) {
-				http.Error(w, "invalid csrf token", 403)
+			r.Body = http.MaxBytesReader(w, r.Body, a.postBodyLimit(r))
+			if err := parseCSRFForm(r); err != nil {
+				http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
+				return
+			}
+			if r.Form.Get("csrf") == "" || r.Form.Get("csrf") != csrfCookie(r) {
+				http.Error(w, "invalid csrf token", http.StatusForbidden)
 				return
 			}
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (a *App) postBodyLimit(r *http.Request) int64 {
+	path := r.URL.Path
+	if path == "/admin/logo" {
+		return maxLogoBodySize
+	}
+	if path == "/create" || path == "/secrets/file" || strings.HasPrefix(path, "/upload/") {
+		return a.cfg.MaxFileSize + maxFormBodySize
+	}
+	return maxFormBodySize
+}
+
+func parseCSRFForm(r *http.Request) error {
+	contentType := strings.ToLower(r.Header.Get("Content-Type"))
+	if strings.HasPrefix(contentType, "multipart/") {
+		return r.ParseMultipartForm(maxFormBodySize)
+	}
+	return r.ParseForm()
 }
 func (a *App) csrf(w http.ResponseWriter, r *http.Request) string {
 	if v := csrfCookie(r); v != "" {
@@ -920,6 +946,58 @@ func clientAddress(r *http.Request) string {
 		return host
 	}
 	return r.RemoteAddr
+}
+
+func (a *App) getIntegrationConfig(ctx context.Context) (redisstore.IntegrationConfig, error) {
+	cfg, err := a.store.GetIntegrationConfig(ctx)
+	if err != nil {
+		return cfg, err
+	}
+	if cfg.SMTPPassword, err = a.decryptIntegrationSecret(cfg.SMTPPassword); err != nil {
+		return cfg, err
+	}
+	if cfg.GraphClientSecret, err = a.decryptIntegrationSecret(cfg.GraphClientSecret); err != nil {
+		return cfg, err
+	}
+	return cfg, nil
+}
+
+func (a *App) saveIntegrationConfig(ctx context.Context, cfg redisstore.IntegrationConfig) error {
+	var err error
+	if cfg.SMTPPassword, err = a.encryptIntegrationSecret(cfg.SMTPPassword); err != nil {
+		return err
+	}
+	if cfg.GraphClientSecret, err = a.encryptIntegrationSecret(cfg.GraphClientSecret); err != nil {
+		return err
+	}
+	return a.store.SaveIntegrationConfig(ctx, cfg)
+}
+
+func (a *App) encryptIntegrationSecret(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" || strings.HasPrefix(value, encryptedSecretPrefix) {
+		return value, nil
+	}
+	payload, err := sec.Encrypt([]byte(value), a.cfg.EncryptionMasterKey)
+	if err != nil {
+		return "", err
+	}
+	return encryptedSecretPrefix + payload.Nonce + ":" + payload.Ciphertext, nil
+}
+
+func (a *App) decryptIntegrationSecret(value string) (string, error) {
+	if value == "" || !strings.HasPrefix(value, encryptedSecretPrefix) {
+		return value, nil
+	}
+	parts := strings.SplitN(strings.TrimPrefix(value, encryptedSecretPrefix), ":", 2)
+	if len(parts) != 2 {
+		return "", fmt.Errorf("invalid encrypted integration secret")
+	}
+	plain, err := sec.Decrypt(sec.EncryptedPayload{Nonce: parts[0], Ciphertext: parts[1]}, a.cfg.EncryptionMasterKey)
+	if err != nil {
+		return "", err
+	}
+	return string(plain), nil
 }
 
 func (a *App) audit(r *http.Request, event, target, result, details string) {

@@ -124,29 +124,30 @@ Status: not started.
 
 ### 2.7 Encrypt integration secrets at rest
 
-- [ ] Encrypt SMTP credentials, Graph client secrets, and other integration secrets before storing them in Redis.
-- [ ] Reuse the master-key wrapping design or equivalent reviewed design.
-- [ ] Avoid displaying existing secret values back to the UI.
+- [x] Encrypt SMTP credentials, Graph client secrets, and other integration secrets before storing them in Redis.
+- [x] Reuse the master-key wrapping design or equivalent reviewed design.
+- [x] Avoid displaying existing secret values back to the UI.
 - [ ] Add tests for save/load behavior.
+- [ ] Add explicit migration coverage for plaintext legacy values.
 
-Status: not started.
+Status: implemented for SMTP password and Graph client secret in `internal/web/server.go`; tests still needed.
 
 ### 2.8 Turn the side-effecting download GET into a POST
 
-- [ ] Ensure claim/download side effects happen on POST only.
-- [ ] Preserve user experience with an interstitial form if needed.
-- [ ] Keep valid file downloads consumed even if transfer is interrupted.
+- [x] Ensure claim/download side effects happen on POST only.
+- [x] Preserve user experience with an interstitial form if needed.
+- [x] Keep valid file downloads consumed even if transfer is interrupted.
 - [ ] Add handler tests.
 
-Status: not started.
+Status: implemented for public file links and authenticated upload-request downloads; tests still needed.
 
 ### 2.9 CSRF and request-size hardening
 
-- [ ] Review all state-changing routes for CSRF coverage.
-- [ ] Ensure upload/text/request body limits are enforced consistently.
+- [x] Review all state-changing routes for CSRF coverage.
+- [x] Ensure upload/text/request body limits are enforced consistently.
 - [ ] Add tests for oversized requests and missing/invalid CSRF tokens.
 
-Status: not started.
+Status: implemented route-aware POST body caps in `internal/web/server.go`; tests still needed.
 
 ## Phase 3 — Lower priority hardening, hygiene, and tests
 
