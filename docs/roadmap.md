@@ -38,9 +38,9 @@ Status: implemented in `internal/redisstore/store.go`; atomic claim and payload-
 - [x] Add `TRUSTED_PROXIES` configuration.
 - [x] Trust `X-Forwarded-For` / `X-Real-IP` only when the direct peer is trusted.
 - [x] Document `TRUSTED_PROXIES`.
-- [ ] Add middleware tests for trusted and untrusted proxy cases.
+- [x] Add middleware tests for trusted and untrusted proxy cases.
 
-Status: implemented in `internal/web/server.go`, `internal/ratelimit/ratelimit.go`, `internal/config/config.go`, and `README.md`; tests still needed.
+Status: implemented in `internal/web/server.go`, `internal/ratelimit/ratelimit.go`, `internal/config/config.go`, and `README.md`; trusted and untrusted proxy coverage is in `internal/web/security_test.go`.
 
 ### 1.4 Make first-run `/setup` safe
 
@@ -56,9 +56,9 @@ Status: existing implementation reviewed in `internal/redisstore/store.go` and `
 - [x] Add throttling for local login failures.
 - [x] Add throttling for link passphrase failures.
 - [x] Keep throttling metadata free of plaintext passphrases, secrets, or generated links.
-- [ ] Add tests for lockout/rate-limit behavior.
+- [x] Add tests for lockout/rate-limit behavior.
 
-Status: implemented with Redis-backed failure counters in `internal/redisstore/store.go`, `internal/web/auth.go`, and `internal/web/server.go`; tests still needed.
+Status: implemented with Redis-backed failure counters in `internal/redisstore/store.go`, `internal/web/auth.go`, and `internal/web/server.go`; counter limit, expiry, and reset coverage is in `internal/redisstore/store_test.go`.
 
 ### 1.6 Neutralize CSV formula injection in the audit export
 
@@ -167,9 +167,9 @@ Status: implemented app service hardening in `docker-compose.yml` with read-only
 - [x] Review whole-file buffering and memory growth risks.
 - [x] Improve cleanup of orphaned encrypted files.
 - [x] Add tests for filename sanitization and storage cleanup.
-- [ ] Replace whole-file buffering with streaming encryption/decryption for large files.
+- [x] Replace whole-file buffering with streaming encryption/decryption for large files.
 
-Status: partially implemented; orphan cleanup already reconciles active Redis storage paths, local writes now remove failed temp files, and storage tests cover orphan cleanup and filename sanitization. Streaming file encryption/decryption remains future work.
+Status: implemented chunked AES-256-GCM streaming for new direct file links in `internal/crypto`, `internal/storage`, and `internal/web`; legacy single-payload files remain readable during expiry-based migration. Crypto tests cover round-trip and tamper rejection.
 
 ### 3.3 i18n and error messages
 

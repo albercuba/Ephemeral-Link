@@ -27,7 +27,7 @@ Ephemeral Link is licensed under the MIT License. See [LICENSE](LICENSE).
 
 ## Security model
 
-Each secret/file gets a cryptographically random opaque ID and a random 256-bit data encryption key. The payload is encrypted with AES-256-GCM. The data key is encrypted with the configured master key and stored as metadata. Plaintext secrets, passphrases, and file contents are not stored.
+Each secret/file gets a cryptographically random opaque ID and a random 256-bit data encryption key. Payloads use AES-256-GCM: direct file links use authenticated 64 KiB encrypted chunks, while legacy single-payload files remain readable until expiry. The data key is encrypted with the configured master key and stored as metadata. Plaintext secrets, passphrases, and file contents are not stored.
 
 Single-use access uses an atomic Redis Lua script. The first valid reveal/download request changes the item from `available` to `consumed`; later requests receive the gone page. For files, the link is consumed before the response is sent. If a download is interrupted, the item remains consumed for security.
 
@@ -66,7 +66,7 @@ Review the app registration regularly, rotate credentials before expiry, and do 
 
 ## Limitations
 
-This MVP uses local filesystem storage and reads encrypted files into memory for decrypt/download. Keep `MAX_FILE_SIZE` conservative. The storage interface is intentionally simple so S3-compatible storage can be added later. This app is for ephemeral sharing, not durable storage or backups.
+This MVP uses local filesystem storage. New direct file links stream authenticated encrypted chunks during upload and download; text secrets and legacy/upload-request payloads still use bounded in-memory processing. Keep `MAX_FILE_SIZE` conservative. The storage interface is intentionally simple so S3-compatible storage can be added later. This app is for ephemeral sharing, not durable storage or backups.
 
 ## Quick start with Docker Compose
 

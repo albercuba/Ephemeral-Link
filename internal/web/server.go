@@ -1,6 +1,8 @@
 package web
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
@@ -280,7 +282,7 @@ func (a *App) createText(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) createFile(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, a.cfg.MaxFileSize+1024*1024)
-	if err := r.ParseMultipartForm(a.cfg.MaxFileSize); err != nil {
+	if err := r.ParseMultipartForm(512 * 1024); err != nil {
 		a.formError(w, r, "invalid_file")
 		return
 	}
@@ -290,13 +292,16 @@ func (a *App) createFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer fh.Close()
-	limited := io.LimitReader(fh, a.cfg.MaxFileSize+1)
-	plaintext, err := io.ReadAll(limited)
-	if err != nil || int64(len(plaintext)) > a.cfg.MaxFileSize || len(plaintext) == 0 {
+	if header.Size <= 0 || header.Size > a.cfg.MaxFileSize {
 		a.formError(w, r, "invalid_file")
 		return
 	}
-	if !diskCanAccept(a.cfg.StoragePath, int64(len(plaintext))*2) {
+	prefix, err := io.ReadAll(io.LimitReader(fh, 512))
+	if err != nil || len(prefix) == 0 {
+		a.formError(w, r, "invalid_file")
+		return
+	}
+	if !diskCanAccept(a.cfg.StoragePath, header.Size*2) {
 		a.formError(w, r, "disk_space_limit")
 		return
 	}
@@ -311,23 +316,20 @@ func (a *App) createFile(w http.ResponseWriter, r *http.Request) {
 		a.bad(w, r, err)
 		return
 	}
-	payload, err := sec.Encrypt(plaintext, dataKey)
-	if err != nil {
-		a.bad(w, r, err)
-		return
-	}
-	p, err := a.files.Write(item.ID, []byte(payload.Ciphertext))
+	p, err := a.files.WriteStream(item.ID, func(dst io.Writer) error {
+		_, streamErr := sec.EncryptReader(io.MultiReader(bytes.NewReader(prefix), fh), dst, dataKey, sec.DefaultChunkSize)
+		return streamErr
+	})
 	if err != nil {
 		a.bad(w, r, err)
 		return
 	}
 	name := storage.SanitizeFilename(header.Filename)
 	item.WrappedKeyNonce, item.WrappedKeyCiphertext = wrapped.Nonce, wrapped.Ciphertext
-	item.PayloadNonce = payload.Nonce
 	item.OriginalFilename = header.Filename
 	item.SanitizedFilename = name
-	item.FileSize = int64(len(plaintext))
-	item.MimeType = http.DetectContentType(plaintext[:min(len(plaintext), 512)])
+	item.FileSize = header.Size
+	item.MimeType = http.DetectContentType(prefix)
 	item.StorageObjectPath = p
 	if err := a.store.Create(r.Context(), item, time.Until(time.Unix(item.ExpiresAt, 0))); err != nil {
 		a.files.Delete(p)
@@ -621,12 +623,28 @@ func (a *App) downloadFile(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) serveClaimedFile(w http.ResponseWriter, r *http.Request, claimed redisstore.Item) {
 	defer a.files.Delete(claimed.StorageObjectPath)
-	enc, err := a.files.Read(claimed.StorageObjectPath)
+	file, err := a.files.Open(claimed.StorageObjectPath)
 	if err != nil {
 		http.Redirect(w, r, "/expired", 303)
 		return
 	}
+	defer file.Close()
 	key, err := sec.UnwrapKey(sec.WrappedKey{Nonce: claimed.WrappedKeyNonce, Ciphertext: claimed.WrappedKeyCiphertext}, a.cfg.EncryptionMasterKey)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	reader := bufio.NewReader(file)
+	w.Header().Set("Content-Type", safeMime(claimed.MimeType))
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": claimed.SanitizedFilename}))
+	w.Header().Set("Content-Length", strconv.FormatInt(claimed.FileSize, 10))
+	if header, peekErr := reader.Peek(len(sec.ChunkedMagic)); peekErr == nil && bytes.Equal(header, sec.ChunkedMagic) {
+		if _, err := sec.DecryptReader(reader, w, key); err != nil {
+			a.log.Warn("streaming file decryption failed", "error", err)
+		}
+		return
+	}
+	enc, err := io.ReadAll(reader)
 	if err != nil {
 		a.bad(w, r, err)
 		return
@@ -636,9 +654,6 @@ func (a *App) serveClaimedFile(w http.ResponseWriter, r *http.Request, claimed r
 		a.bad(w, r, err)
 		return
 	}
-	w.Header().Set("Content-Type", safeMime(claimed.MimeType))
-	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": claimed.SanitizedFilename}))
-	w.Header().Set("Content-Length", strconv.Itoa(len(plain)))
 	_, _ = w.Write(plain)
 }
 

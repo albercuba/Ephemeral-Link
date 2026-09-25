@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -30,8 +31,31 @@ func (l *Local) Write(id string, data []byte) (string, error) {
 	}
 	return p, nil
 }
-func (l *Local) Read(path string) ([]byte, error) { return os.ReadFile(path) }
-func (l *Local) Delete(path string)               { _ = os.Remove(path) }
+func (l *Local) Read(path string) ([]byte, error)   { return os.ReadFile(path) }
+func (l *Local) Open(path string) (*os.File, error) { return os.Open(path) }
+func (l *Local) WriteStream(id string, write func(io.Writer) error) (string, error) {
+	p := l.Path(id)
+	tmp := p + ".tmp"
+	file, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return "", err
+	}
+	if err := write(file); err != nil {
+		_ = file.Close()
+		_ = os.Remove(tmp)
+		return "", err
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(tmp)
+		return "", err
+	}
+	if err := os.Rename(tmp, p); err != nil {
+		_ = os.Remove(tmp)
+		return "", err
+	}
+	return p, nil
+}
+func (l *Local) Delete(path string) { _ = os.Remove(path) }
 func (l *Local) CleanupOlderThan(age time.Duration) error {
 	cutoff := time.Now().Add(-age)
 	return filepath.WalkDir(l.root, func(p string, d fs.DirEntry, err error) error {

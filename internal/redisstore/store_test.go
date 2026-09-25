@@ -88,6 +88,47 @@ func TestClaimIsAtomicAndWipesPayloadFields(t *testing.T) {
 	}
 }
 
+func TestFailureThrottleBlocksAtLimitAndResets(t *testing.T) {
+	store, server := newTestStore(t)
+	ctx := context.Background()
+	const limit int64 = 3
+	for attempt := int64(1); attempt <= limit; attempt++ {
+		blocked, err := store.RegisterFailure(ctx, "login", "user|198.51.100.10", limit, time.Minute)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if blocked != (attempt == limit) {
+			t.Fatalf("attempt %d blocked = %v, want %v", attempt, blocked, attempt == limit)
+		}
+	}
+	blocked, err := store.FailureLimitExceeded(ctx, "login", "user|198.51.100.10", limit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !blocked {
+		t.Fatal("failure limit should be exceeded")
+	}
+
+	server.FastForward(2 * time.Minute)
+	blocked, err = store.FailureLimitExceeded(ctx, "login", "user|198.51.100.10", limit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if blocked {
+		t.Fatal("expired failure counter should not remain blocked")
+	}
+	if err := store.ResetFailures(ctx, "login", "user|198.51.100.10"); err != nil {
+		t.Fatal(err)
+	}
+	blocked, err = store.FailureLimitExceeded(ctx, "login", "user|198.51.100.10", limit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if blocked {
+		t.Fatal("reset failure counter should not remain blocked")
+	}
+}
+
 func TestCreateInitialAdminAllowsOnlyOneAdministrator(t *testing.T) {
 	store, _ := newTestStore(t)
 	ctx := context.Background()

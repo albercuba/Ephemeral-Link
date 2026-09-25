@@ -1,6 +1,7 @@
 package web
 
 import (
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -8,6 +9,44 @@ import (
 
 	"ephemeral-link/internal/config"
 )
+
+func TestTrustedProxyMiddlewareUsesForwardedClientOnlyForTrustedPeer(t *testing.T) {
+	trusted, err := parseTrustedProxies([]string{"10.0.0.1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	app := &App{trustedProxies: trusted}
+	handler := app.trustedProxyMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Test-Client", clientAddress(r))
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	tests := []struct {
+		name       string
+		remoteAddr string
+		forwarded  string
+		want       string
+	}{
+		{name: "trusted proxy", remoteAddr: "10.0.0.1:443", forwarded: "198.51.100.20, 10.0.0.1", want: "198.51.100.20"},
+		{name: "untrusted peer", remoteAddr: "10.0.0.2:443", forwarded: "198.51.100.20", want: "10.0.0.2"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/", nil)
+			request.RemoteAddr = tt.remoteAddr
+			request.Header.Set("X-Forwarded-For", tt.forwarded)
+			recorder := httptest.NewRecorder()
+			handler.ServeHTTP(recorder, request)
+			if got := recorder.Header().Get("X-Test-Client"); got != tt.want {
+				t.Fatalf("client address = %q, want %q", got, tt.want)
+			}
+		})
+	}
+
+	if !net.ParseIP("198.51.100.20").IsGlobalUnicast() {
+		t.Fatal("test address should be a valid unicast address")
+	}
+}
 
 func TestCSVSafeCellNeutralizesFormulas(t *testing.T) {
 	tests := map[string]string{
