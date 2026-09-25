@@ -21,6 +21,7 @@
       <button id="admin-menu-existing" class="admin-menu-button" type="button" data-admin-tab="existing-links">{{call $.T "existing_links"}}</button>
       <button id="admin-menu-users" class="admin-menu-button" type="button" data-admin-tab="manage-users">{{call $.T "manage_users"}}</button>
       <button id="admin-menu-branding" class="admin-menu-button" type="button" data-admin-tab="branding">{{call $.T "branding_settings"}}</button>
+      <button id="admin-menu-legal" class="admin-menu-button" type="button" data-admin-tab="legal"></button>{{call $.T "legal_documents"}}</button>
       <button id="admin-menu-email" class="admin-menu-button" type="button" data-admin-tab="email-settings">{{call $.T "email_settings"}}</button>
       <button id="admin-menu-microsoft" class="admin-menu-button" type="button" data-admin-tab="microsoft-365">{{call $.T "microsoft_365_integration"}}</button>
       <button id="admin-menu-ad" class="admin-menu-button" type="button" data-admin-tab="local-ad">{{call $.T "local_ad_integration"}}</button>
@@ -38,6 +39,17 @@
       <article id="admin-ad-card" class="created-card admin-card admin-panel" data-admin-panel="local-ad" hidden>
         <section class="created-status-panel"><h2>{{call $.T "local_ad_integration"}}</h2><p>{{call $.T "configure_ad_desc"}}</p></section>
         <section class="admin-card-body"><details id="admin-ad-steps" class="integration-steps"><summary>{{call $.T "ad_steps_title"}}</summary><p>{{call $.T "ad_steps_body"}}</p></details><form method="post" action="/admin/integrations"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="section" value="ad"><label class="checkbox-label"><input type="checkbox" name="ad_enabled" {{if .Integration.ADEnabled}}checked{{end}}><span>{{call $.T "enable_local_ad_login"}}</span></label><label>{{call $.T "ad_server_host_label"}}<input name="ad_host" value="{{.Integration.ADHost}}"></label><label>{{call $.T "base_dn_label"}}<input name="ad_base_dn" value="{{.Integration.ADBaseDN}}"></label><label>{{call $.T "bind_dn_label"}}<input name="ad_bind_dn" value="{{.Integration.ADBindDN}}"></label><label>{{call $.T "bind_password_label"}}<input name="ad_bind_password" type="password" autocomplete="new-password" placeholder="{{call $.T "leave_blank_keep_password"}}"></label><button type="submit" >{{call $.T "save_ad_settings"}}</button></form></section>
+      </article>
+      <article id="admin-legal-card" class="created-card admin-card admin-panel" data-admin-panel="legal" hidden>
+        <section class="created-status-panel"><h2>{{call $.T "legal_documents"}}</h2><p>{{call $.T "legal_documents_desc"}}</p></section>
+        <section class="admin-card-body">
+          <form method="post" action="/admin/legal">
+            <input type="hidden" name="csrf" value="{{.CSRF}}">
+            <label class="full-field">{{call $.T "privacy_document"}}<textarea name="privacy" rows="24" maxlength="262144">{{.PrivacyMarkdown}}</textarea></label>
+            <label class="full-field">{{call $.T "terms_document"}}<textarea name="terms" rows="24" maxlength="262144">{{.TermsMarkdown}}</textarea></label>
+            <button type="submit">{{call $.T "save_legal_documents"}}</button>
+          </form>
+        </section>
       </article>
       <article id="admin-email-card" class="created-card admin-card admin-panel" data-admin-panel="email-settings" hidden>
         <section class="created-status-panel"><h2>{{call $.T "email_settings"}}</h2><p>{{call $.T "configure_email_desc"}}</p></section>

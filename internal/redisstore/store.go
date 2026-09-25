@@ -237,6 +237,11 @@ type UploadRequest struct {
 	UploadedAt     int64
 }
 
+type LegalDocuments struct {
+	Privacy string
+	Terms   string
+}
+
 type IntegrationConfig struct {
 	MicrosoftEnabled    bool
 	MicrosoftTenantID   string
@@ -805,6 +810,18 @@ func (s *Store) MarkUploadRequestUploaded(ctx context.Context, id, itemID string
 func (s *Store) ReleaseUploadRequest(ctx context.Context, id string) error {
 	return s.rdb.HSet(ctx, uploadRequestKey(id), "status", "available").Err()
 }
+func (s *Store) SaveLegalDocuments(ctx context.Context, documents LegalDocuments) error {
+	return s.rdb.HSet(ctx, "el:legal", map[string]any{"privacy": documents.Privacy, "terms": documents.Terms}).Err()
+}
+
+func (s *Store) GetLegalDocuments(ctx context.Context) (LegalDocuments, error) {
+	m, err := s.rdb.HGetAll(ctx, "el:legal").Result()
+	if err != nil {
+		return LegalDocuments{}, err
+	}
+	return LegalDocuments{Privacy: m["privacy"], Terms: m["terms"]}, nil
+}
+
 func (s *Store) SaveIntegrationConfig(ctx context.Context, cfg IntegrationConfig) error {
 	return s.rdb.HSet(ctx, "el:integration", map[string]any{"microsoft_enabled": boolString(cfg.MicrosoftEnabled), "microsoft_tenant_id": cfg.MicrosoftTenantID, "microsoft_client_id": cfg.MicrosoftClientID, "microsoft_audience": cfg.MicrosoftAudience, "microsoft_authority": cfg.MicrosoftAuthority, "entra_admin_group_name": cfg.EntraAdminGroupName, "entra_admin_group_id": cfg.EntraAdminGroupID, "entra_user_group_name": cfg.EntraUserGroupName, "entra_user_group_id": cfg.EntraUserGroupID, "ad_enabled": boolString(cfg.ADEnabled), "ad_host": cfg.ADHost, "ad_base_dn": cfg.ADBaseDN, "ad_bind_dn": cfg.ADBindDN, "ad_bind_password": cfg.ADBindPassword, "smtp_enabled": boolString(cfg.SMTPEnabled), "smtp_host": cfg.SMTPHost, "smtp_port": cfg.SMTPPort, "smtp_username": cfg.SMTPUsername, "smtp_password": cfg.SMTPPassword, "smtp_from": cfg.SMTPFrom, "graph_enabled": boolString(cfg.GraphEnabled), "graph_tenant_id": cfg.GraphTenantID, "graph_client_id": cfg.GraphClientID, "graph_client_secret": cfg.GraphClientSecret, "graph_sender": cfg.GraphSender}).Err()
 }

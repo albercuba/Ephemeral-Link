@@ -716,6 +716,10 @@ func (a *App) adminPage(r *http.Request, user *redisstore.User) (Page, error) {
 	if err != nil {
 		return Page{}, err
 	}
+	legalDocuments, err := a.legalDocuments(r.Context())
+	if err != nil {
+		return Page{}, err
+	}
 	allAuditEvents, err := a.store.ListAuditEventsInWorkspace(r.Context(), 500, workspace)
 	if err != nil {
 		return Page{}, err
@@ -728,9 +732,9 @@ func (a *App) adminPage(r *http.Request, user *redisstore.User) (Page, error) {
 		AuditPage: auditPage.Page, AuditTotal: auditPage.Total, AuditStart: auditPage.Start, AuditEnd: auditPage.End,
 		AuditPrevURL: auditPage.PrevURL, AuditNextURL: auditPage.NextURL, AuditHasPrev: auditPage.HasPrev,
 		AuditHasNext: auditPage.HasNext, HasLinks: len(items)+len(uploadRequests) > 0, Users: users,
-		Integration: integration, Disk: diskInfo(a.cfg.StoragePath),
-		Analytics: buildAdminAnalytics(items, uploadRequests, allAuditEvents),
-		Message:   adminSavedMessage(a.t(r, "settings_saved_"+r.URL.Query().Get("saved"))),
+		Integration: integration, PrivacyMarkdown: legalDocuments.Privacy, TermsMarkdown: legalDocuments.Terms,
+		Disk: diskInfo(a.cfg.StoragePath), Analytics: buildAdminAnalytics(items, uploadRequests, allAuditEvents),
+		Message: adminSavedMessage(a.t(r, "settings_saved_"+r.URL.Query().Get("saved"))),
 	}, nil
 }
 

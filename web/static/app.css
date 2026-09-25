@@ -583,6 +583,58 @@ button:hover,
     line-height: 1.6;
 }
 
+.markdown-content {
+    display: block;
+}
+
+.markdown-content > * {
+    margin-top: 0.85rem;
+}
+
+.markdown-content > :first-child {
+    margin-top: 0;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+    margin-top: 1.4rem;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+    padding-left: 1.4rem;
+    color: #39485d;
+    line-height: 1.6;
+}
+
+.markdown-content blockquote {
+    margin-left: 0;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid var(--el-orange);
+    background: var(--el-blue-bg);
+    color: #39485d;
+}
+
+.markdown-content table {
+    width: 100%;
+    border-collapse: collapse;
+    display: block;
+    overflow-x: auto;
+}
+
+.markdown-content th,
+.markdown-content td {
+    padding: 0.55rem;
+    border-bottom: 1px solid #d5dee8;
+    text-align: left;
+    vertical-align: top;
+}
+
+.markdown-content a {
+    color: var(--el-blue);
+}
+
 .secret {
     white-space: pre-wrap;
     word-break: break-word;

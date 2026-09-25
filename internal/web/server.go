@@ -82,6 +82,9 @@ type Page struct {
 	Integration                                                                                 redisstore.IntegrationConfig
 	Disk                                                                                        DiskInfo
 	Analytics                                                                                   AdminAnalytics
+	LegalHTML                                                                                   template.HTML
+	PrivacyMarkdown                                                                             string
+	TermsMarkdown                                                                               string
 	T                                                                                           func(string) string
 	Languages                                                                                   []string
 	TTLs                                                                                        []ttlOpt
@@ -187,6 +190,7 @@ func (a *App) Routes() http.Handler {
 		r.Post("/admin/users", a.adminSaveUser)
 		r.Post("/admin/users/{username}/delete", a.adminDeleteUser)
 		r.Post("/admin/integrations", a.adminSaveIntegrations)
+		r.Post("/admin/legal", a.adminSaveLegal)
 		r.Post("/admin/logo", a.adminUploadLogo)
 	})
 	r.Get("/s/{id}", a.viewText)
@@ -209,10 +213,30 @@ func (a *App) expired(w http.ResponseWriter, r *http.Request) {
 	a.render(w, r, 410, "expired.html", Page{Title: a.t(r, "gone_title")})
 }
 func (a *App) privacy(w http.ResponseWriter, r *http.Request) {
-	a.render(w, r, 200, "privacy.html", Page{Title: a.t(r, "privacy_title")})
+	documents, err := a.legalDocuments(r.Context())
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	html, err := renderLegalMarkdown(documents.Privacy)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	a.render(w, r, 200, "privacy.html", Page{Title: a.t(r, "privacy_title"), LegalHTML: html})
 }
 func (a *App) terms(w http.ResponseWriter, r *http.Request) {
-	a.render(w, r, 200, "terms.html", Page{Title: a.t(r, "terms_title")})
+	documents, err := a.legalDocuments(r.Context())
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	html, err := renderLegalMarkdown(documents.Terms)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	a.render(w, r, 200, "terms.html", Page{Title: a.t(r, "terms_title"), LegalHTML: html})
 }
 func (a *App) created(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(createdReceiptCookieName)
