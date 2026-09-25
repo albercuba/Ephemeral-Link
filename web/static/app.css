@@ -1621,9 +1621,14 @@ textarea,
 
 .admin-shell {
     display: grid;
-    grid-template-columns: minmax(14rem, 18rem) 1fr;
+    grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
     gap: 1.25rem;
     align-items: start;
+}
+
+.admin-panel,
+.admin-card {
+    min-width: 0;
 }
 
 .admin-menu {
@@ -2227,13 +2232,285 @@ html[data-theme="dark"]
 }
 
 @media (max-width: 900px) {
+    .admin-page {
+        max-width: 100%;
+    }
+
     .admin-shell {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .admin-menu {
         position: static;
+        display: flex;
+        gap: 0.65rem;
+        overflow-x: auto;
+        padding-bottom: 0.15rem;
+        scrollbar-width: thin;
     }
+
+    .admin-menu-button {
+        flex: 0 0 auto;
+        width: auto;
+        min-width: 9.5rem;
+        padding: 0.8rem 0.9rem;
+        white-space: nowrap;
+    }
+
+    .admin-card-body {
+        overflow-x: auto;
+    }
+
+    .admin-card-body > .admin-table,
+    .admin-users-table {
+        min-width: 46rem;
+    }
+
+    .audit-table-scroll .admin-table {
+        min-width: 54rem;
+    }
+}
+
+@media (max-width: 720px) {
+    .page {
+        padding: 0.85rem;
+    }
+
+    .narrow,
+    .created-page {
+        padding-top: 1rem;
+    }
+
+    .nav,
+    .el-nav {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+        align-items: start;
+        margin-bottom: 2rem;
+    }
+
+    .brand,
+    .el-brand {
+        min-width: 0;
+    }
+
+    .brand-logo {
+        max-width: 9rem;
+    }
+
+    .nav-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        justify-content: flex-start;
+        width: 100%;
+    }
+
+    .el-hero {
+        margin-bottom: 1.75rem;
+    }
+
+    .el-hero h1 {
+        font-size: clamp(1.35rem, 8vw, 1.65rem);
+    }
+
+    .el-hero p {
+        font-size: 0.95rem;
+        line-height: 1.55;
+    }
+
+    .el-create-card .tab-panel,
+    .created-link-panel,
+    .created-status-panel,
+    .created-actions-panel,
+    .secret-revealed-secret-panel,
+    .admin-card-body,
+    .terms-content,
+    .privacy-card {
+        padding: 1rem;
+    }
+
+    .warning-card,
+    .created-security-note {
+        margin-left: -1rem;
+        margin-right: -1rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .form-columns,
+    .admin-user-form,
+    .user-edit-form {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .action-row,
+    .audit-pagination,
+    .audit-pagination-summary,
+    .dialog-actions,
+    .confirm-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: stretch;
+    }
+
+    .action-row button,
+    .dialog-actions button,
+    .confirm-actions button,
+    .audit-pagination .secondary {
+        width: 100%;
+    }
+
+    .domain-note strong {
+        display: block;
+        width: fit-content;
+        margin: 0.45rem 0 0;
+    }
+
+    .history-header,
+    .history-meta,
+    .history-item,
+    .history-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: stretch;
+    }
+
+    .history-meta {
+        gap: 0.65rem;
+    }
+
+    .history-item-meta {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+
+    .history-expires {
+        grid-column: 1 / -1;
+    }
+
+    .history-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .history-actions button {
+        width: 100%;
+    }
+
+    .history-ghost {
+        left: auto;
+        right: 0.75rem;
+        font-size: 2.8rem;
+    }
+
+    .audit-filter-form {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .audit-reset-button {
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 520px) {
+    .page {
+        padding: 0.7rem;
+    }
+
+    .card,
+    .reveal-warning-card,
+    .confirm-modal {
+        padding: 1rem;
+    }
+
+    .tabs {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tab-btn {
+        padding: 0.8rem 0.9rem;
+        text-align: left;
+    }
+
+    .passphrase-input-wrap {
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    .passphrase-input-wrap input {
+        padding-right: 0.75rem;
+    }
+
+    .passphrase-actions {
+        position: static;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.35rem;
+        transform: none;
+    }
+
+    .passphrase-action-button {
+        width: 100%;
+        min-height: 2.4rem;
+        border: 1px solid #dfe7ef;
+        background: #ffffff;
+    }
+
+    .file-control,
+    .created-copy-row,
+    dl {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .file-button,
+    .created-copy-row button {
+        width: 100%;
+    }
+
+    .encrypted-pill {
+        position: static;
+        display: inline-flex;
+        width: fit-content;
+        margin-bottom: 0.85rem;
+    }
+
+    .secret-revealed-status-panel h1 {
+        margin-right: 0;
+    }
+
+    .timeline-item {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.65rem;
+    }
+
+    .timeline-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+    }
+
+    .admin-menu {
+        display: grid;
+        overflow: visible;
+    }
+
+    .admin-menu-button {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .admin-card-body > .admin-table,
+    .admin-users-table,
+    .audit-table-scroll .admin-table {
+        min-width: 40rem;
+    }
+
+    .user-edit-dialog {
+        width: calc(100% - 1rem);
+    }
+}
+
+html[data-theme="dark"] .passphrase-action-button {
+    border-color: var(--line);
+    background: var(--card);
 }
 /* Local icon fallbacks replace the previous Font Awesome CDN dependency. */
 .fa-solid {
