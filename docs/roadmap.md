@@ -47,9 +47,9 @@ Status: implemented in `internal/web/server.go`, `internal/ratelimit/ratelimit.g
 - [x] Use Redis `SETNX` lock for initial admin creation.
 - [x] Recheck admin existence inside the locked creation path.
 - [x] Add concurrent setup regression test.
-- [ ] Consider rate limiting setup attempts.
+- [x] Consider rate limiting setup attempts.
 
-Status: existing implementation reviewed in `internal/redisstore/store.go` and `internal/web/auth.go`; concurrent setup coverage is in `internal/redisstore/store_test.go`.
+Status: setup is covered by the global request limiter and Redis setup lock; concurrent setup coverage is in `internal/redisstore/store_test.go`.
 
 ### 1.5 Brute-force protection for passphrases and logins
 
@@ -64,9 +64,9 @@ Status: implemented with Redis-backed failure counters in `internal/redisstore/s
 
 - [x] Sanitize dynamic audit CSV cells starting with spreadsheet formula trigger characters.
 - [x] Preserve CSV export behavior while preventing formula execution in spreadsheet tools.
-- [ ] Add unit tests for CSV cell sanitization.
+- [x] Add unit tests for CSV cell sanitization.
 
-Status: implemented in `internal/web/auth.go`; tests still needed.
+Status: implemented in `internal/web/auth.go`; formula-neutralization tests are in `internal/web/security_test.go`.
 
 ## Phase 2 — Medium priority
 
@@ -92,9 +92,9 @@ Status: hardened verifier in `internal/web/auth.go` validates RS256, key ID, RSA
 
 - [x] Find any Redis `KEYS` usage.
 - [x] Replace with indexes or `SCAN`-based iteration.
-- [ ] Add tests for list/search behavior.
+- [x] Add tests for list/search behavior.
 
-Status: implemented with cursor-based `SCAN` in `internal/redisstore/store.go`; tests still needed.
+Status: implemented with cursor-based `SCAN` in `internal/redisstore/store.go`; Redis listing and workspace filtering are covered by `internal/redisstore/store_test.go`.
 
 ### 2.4 Stop putting the secret link into URLs
 
@@ -110,7 +110,7 @@ Status: implemented with short-lived server-side created-link receipts and an op
 - [x] Add `Cache-Control: no-store` for sensitive pages/responses.
 - [x] Add HSTS when serving behind HTTPS / secure cookies.
 - [x] Verify headers on reveal, download, login, setup, and admin pages.
-- [ ] Add security header tests.
+- [x] Add security header tests.
 
 Status: implemented in `internal/web/server.go`; generic and route-matrix coverage is in `internal/web/security_test.go`.
 
@@ -210,7 +210,7 @@ Status: in progress; README updated for master key and trusted proxy configurati
 - [x] Add config validation tests.
 - [x] Add Redis claim semantics tests.
 - [x] Add setup race tests.
-- [ ] Add passphrase/login brute-force tests.
+- [x] Add passphrase/login brute-force tests.
 - [x] Add audit CSV injection tests.
 - [x] Add security header tests.
 - [x] Add request-size/CSRF tests.
@@ -231,13 +231,13 @@ docker compose build
 Manual security checks:
 
 - [x] App refuses to start without a valid `ENCRYPTION_MASTER_KEY`.
-- [ ] Claimed Redis items no longer retain payload/key fields.
-- [ ] Untrusted clients cannot spoof IPs with `X-Forwarded-For`.
-- [ ] Setup cannot create multiple initial admins under concurrent requests.
-- [ ] Login and passphrase brute-force attempts are throttled.
-- [ ] Audit CSV export neutralizes formula injection.
-- [ ] Sensitive pages and responses are not cached.
-- [ ] File download/reveal semantics remain single-use.
+- [x] Claimed Redis items no longer retain payload/key fields.
+- [x] Untrusted clients cannot spoof IPs with `X-Forwarded-For`.
+- [x] Setup cannot create multiple initial admins under concurrent requests.
+- [x] Login and passphrase brute-force attempts are throttled.
+- [x] Audit CSV export neutralizes formula injection.
+- [x] Sensitive pages and responses are not cached.
+- [x] File download/reveal semantics remain single-use.
 
 ## Future platform extensions
 

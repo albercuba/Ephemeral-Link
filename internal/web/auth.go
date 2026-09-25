@@ -714,7 +714,7 @@ func (a *App) admin(w http.ResponseWriter, r *http.Request) {
 	analytics := buildAdminAnalytics(items, uploadRequests, allAuditEvents)
 	disk := diskInfo(a.cfg.StoragePath)
 	message := adminSavedMessage(a.t(r, "settings_saved_"+r.URL.Query().Get("saved")))
-	a.render(w, r, 200, "admin.html", Page{Title: "Admin", User: user, Items: items, UploadRequests: uploadRequests, AuditEvents: auditPage.Events, AuditFilterEvent: auditPage.Event, AuditCSVURL: auditCSVURL(r.URL.Query()), AuditFilterResult: auditPage.Result, AuditFilterActor: auditPage.Actor, AuditFilterQuery: auditPage.Query, AuditPage: auditPage.Page, AuditTotal: auditPage.Total, AuditStart: auditPage.Start, AuditEnd: auditPage.End, AuditPrevURL: auditPage.PrevURL, AuditNextURL: auditPage.NextURL, AuditHasPrev: auditPage.HasPrev, AuditHasNext: auditPage.HasNext, HasLinks: len(items)+len(uploadRequests) > 0, Users: users, Integration: integration, Disk: disk, Analytics: analytics, Message: message})
+	a.render(w, r, 200, "admin.html", Page{Title: a.t(r, "admin_title"), User: user, Items: items, UploadRequests: uploadRequests, AuditEvents: auditPage.Events, AuditFilterEvent: auditPage.Event, AuditCSVURL: auditCSVURL(r.URL.Query()), AuditFilterResult: auditPage.Result, AuditFilterActor: auditPage.Actor, AuditFilterQuery: auditPage.Query, AuditPage: auditPage.Page, AuditTotal: auditPage.Total, AuditStart: auditPage.Start, AuditEnd: auditPage.End, AuditPrevURL: auditPage.PrevURL, AuditNextURL: auditPage.NextURL, AuditHasPrev: auditPage.HasPrev, AuditHasNext: auditPage.HasNext, HasLinks: len(items)+len(uploadRequests) > 0, Users: users, Integration: integration, Disk: disk, Analytics: analytics, Message: message})
 }
 
 type auditPageData struct {

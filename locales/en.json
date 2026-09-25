@@ -253,6 +253,7 @@
   "created_link_email_fallback": "If the button does not work, copy and paste this URL into your browser:",
   "email_kind_text": "text",
   "email_kind_file": "file",
+  "admin_title": "Admin",
   "admin_analytics": "Analytics",
   "admin_analytics_desc": "Operational counts from active metadata and recent audit events. Secret contents are never included.",
   "analytics_active_text_links": "Active text links",

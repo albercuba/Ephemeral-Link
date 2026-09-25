@@ -253,6 +253,7 @@
   "created_link_email_fallback": "Wenn der Button nicht funktioniert, kopiere diese URL in deinen Browser:",
   "email_kind_text": "Text",
   "email_kind_file": "Datei",
+  "admin_title": "Administration",
   "admin_analytics": "Analysen",
   "admin_analytics_desc": "Betriebszahlen aus aktiven Metadaten und aktuellen Audit-Ereignissen. Geheimnisinhalte sind nie enthalten.",
   "analytics_active_text_links": "Aktive Textlinks",
