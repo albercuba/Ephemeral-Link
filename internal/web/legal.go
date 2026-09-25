@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 
 	"ephemeral-link/internal/redisstore"
 )
@@ -42,7 +43,7 @@ func (a *App) legalDocuments(ctx context.Context) (redisstore.LegalDocuments, er
 func renderLegalMarkdown(source string) (template.HTML, error) {
 	source = stripLegalFrontMatter(source)
 	var rendered bytes.Buffer
-	md := goldmark.New()
+	md := goldmark.New(goldmark.WithExtensions(extension.GFM))
 	if err := md.Convert([]byte(source), &rendered); err != nil {
 		return "", fmt.Errorf("render legal document: %w", err)
 	}

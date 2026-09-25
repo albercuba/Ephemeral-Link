@@ -20,6 +20,13 @@ func TestRenderLegalMarkdownStripsFrontMatterAndEscapesHTML(t *testing.T) {
 	if strings.Contains(output, "title: Test") {
 		t.Fatalf("front matter was rendered: %s", output)
 	}
+	table, err := renderLegalMarkdown("| Section | Details |\n| --- | --- |\n| A | B |")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(table), "<table>") || !strings.Contains(string(table), "<th>Section</th>") {
+		t.Fatalf("GFM summary table was not rendered as a table: %s", table)
+	}
 }
 
 func TestDefaultLegalDocumentsAreAvailable(t *testing.T) {
