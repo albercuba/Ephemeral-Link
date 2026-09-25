@@ -1,6 +1,6 @@
 # Production configuration guide
 
-This guide covers the minimum production settings for running Ephemeral Link safely with Docker Compose, Redis/Valkey, and local encrypted file storage. For an operator-focused step-by-step list, use the [production deployment checklist](production-deployment-checklist.md).
+This guide covers the minimum production settings for running Ephemeral Link safely with Docker Compose, Redis/Valkey, local encrypted file storage, or an S3-compatible encrypted storage backend. For an operator-focused step-by-step list, use the [production deployment checklist](production-deployment-checklist.md).
 
 ## Production checklist
 
@@ -80,7 +80,14 @@ Important:
 | --- | --- |
 | `APP_BASE_URL` | Set to the public HTTPS origin, for example `https://links.example.com`. Generated links use this value. |
 | `REDIS_URL` | Usually `redis://redis:6379/0` in Compose. Use a private network only; do not expose Redis publicly. |
-| `STORAGE_PATH` | Defaults to `/app/data/storage` in Compose. Must be outside `web/static` and backed by a persistent volume. |
+| `STORAGE_PATH` | Defaults to `/app/data/storage` in Compose and is used by the local backend. Must be outside `web/static` and backed by a persistent volume. |
+| `STORAGE_BACKEND` | `local` by default; set to `s3` for S3-compatible object storage. |
+| `S3_ENDPOINT` | S3-compatible endpoint hostname without a scheme. |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Least-privilege server-side credentials. Never expose them to clients. |
+| `S3_SESSION_TOKEN` | Optional temporary credentials token. |
+| `S3_BUCKET` / `S3_PREFIX` | Bucket and object prefix for encrypted payloads. |
+| `S3_SECURE` | Use TLS for S3 connections; keep `true` in production. |
+| `DEFAULT_WORKSPACE_ID` | Workspace assigned to legacy records and records without an explicit workspace. |
 | `MAX_TEXT_SECRET_SIZE` | Keep small for secrets; default is `65536` bytes. |
 | `MAX_FILE_SIZE` | Default is `10485760` bytes (10 MiB). Increase only after sizing memory, disk, reverse proxy limits, and upload timeouts. |
 | `DEFAULT_TTL_SECONDS` | Default link lifetime when users do not choose one. |

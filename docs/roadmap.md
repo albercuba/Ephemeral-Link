@@ -183,11 +183,11 @@ Status: implemented chunked AES-256-GCM streaming for new direct file links in `
 
 ### 3.3 i18n and error messages
 
-- [ ] Ensure every visible UI string comes from `locales/en.json` and `locales/de.json`.
+- [x] Ensure every visible UI string comes from `locales/en.json` and `locales/de.json`.
 - [x] Keep user-facing email copy localized.
 - [x] Avoid leaking sensitive operational details in user-facing errors.
 
-Status: in progress; login and Microsoft sign-in errors now use localized messages, admin role/status/filter labels now use both locale bundles, and locale key consistency is tested. A full template/string audit is still needed.
+Status: complete for server-rendered templates; visible labels, admin status values, placeholders, and page titles use the locale bundles, with locale key consistency tests.
 
 ### 3.4 Code hygiene
 
@@ -199,11 +199,11 @@ Status: not started.
 
 ### 3.5 Documentation cleanup
 
-- [ ] Update deployment docs for every behavior/config change.
-- [ ] Keep `.env.example`, README, and production docs in sync.
-- [ ] Document operational backup/restore expectations.
+- [x] Update deployment docs for every behavior/config change.
+- [x] Keep `.env.example`, README, and production docs in sync.
+- [x] Document operational backup/restore expectations.
 
-Status: in progress; README updated for master key and trusted proxy configuration.
+Status: complete; README, production configuration, Compose settings, migration commands, storage backends, workspace operations, and backup/recovery guidance are documented.
 
 ### 3.6 Test coverage
 
