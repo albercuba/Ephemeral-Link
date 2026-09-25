@@ -101,9 +101,9 @@ Status: implemented with cursor-based `SCAN` in `internal/redisstore/store.go`; 
 - [x] Avoid exposing generated links in query strings where possible.
 - [x] Avoid leaking generated links via Referer headers, logs, or browser history.
 - [x] Update templates and email flows without logging full links.
-- [ ] Add receipt-flow tests for `/created`.
+- [x] Add receipt-flow tests for `/created`.
 
-Status: implemented with short-lived server-side created-link receipts and an opaque `/created` cookie; tests still needed.
+Status: implemented with short-lived server-side created-link receipts and an opaque `/created` cookie; receipt creation coverage is in `internal/web/handler_test.go`.
 
 ### 2.5 Response headers: no-store and HSTS
 
@@ -116,12 +116,12 @@ Status: implemented in `internal/web/server.go`; tests still needed.
 
 ### 2.6 Self-host fonts, icons and MSAL; tighten the CSP
 
-- [ ] Remove production dependencies on external font/icon/script CDNs.
-- [ ] Self-host required static assets.
+- [x] Remove production dependencies on external font/icon/script CDNs.
+- [x] Self-host required static assets.
 - [x] Tighten CSP after external font/icon assets are removed.
 - [x] Update third-party notices.
 
-Status: partially implemented; external Google Fonts and Font Awesome stylesheets were removed and replaced with local CSS/system-font fallbacks. MSAL is still loaded from Microsoft/jsDelivr CDNs until a reviewed self-hosted vendor asset is added.
+Status: complete; external Google Fonts and Font Awesome stylesheets were removed and replaced with local CSS/system-font fallbacks, and the pinned MSAL 2.38.3 browser bundle is vendored under `web/static/vendor/`.
 
 ### 2.7 Encrypt integration secrets at rest
 
@@ -138,9 +138,9 @@ Status: implemented for SMTP password and Graph client secret in `internal/web/s
 - [x] Ensure claim/download side effects happen on POST only.
 - [x] Preserve user experience with an interstitial form if needed.
 - [x] Keep valid file downloads consumed even if transfer is interrupted.
-- [ ] Add handler tests.
+- [x] Add handler tests.
 
-Status: implemented for public file links and authenticated upload-request downloads; tests still needed.
+Status: implemented for public file links and authenticated upload-request downloads; single-use streaming download coverage is in `internal/web/handler_test.go`.
 
 ### 2.9 CSRF and request-size hardening
 
@@ -205,7 +205,7 @@ Status: in progress; README updated for master key and trusted proxy configurati
 - [x] Add security header tests.
 - [x] Add request-size/CSRF tests.
 
-Status: in progress; focused tests cover config validation, Redis claim/setup semantics, audit CSV escaping, security headers, integration secret helpers, CSRF validation, and route-aware body limits.
+Status: in progress; focused tests cover config validation, Redis claim/setup semantics, audit CSV escaping, security headers, integration secret helpers, CSRF validation, route-aware body limits, receipts, and single-use streaming downloads.
 
 ## Final verification checklist
 

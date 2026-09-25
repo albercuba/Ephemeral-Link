@@ -22,42 +22,9 @@
     return response.json();
   }
 
-  function loadScript(src) {
-    return new Promise(function (resolve, reject) {
-      const existing = document.querySelector('script[src="' + src + '"]');
-      if (existing) {
-        if (window.msal) {
-          resolve();
-          return;
-        }
-        existing.addEventListener("load", resolve, { once: true });
-        existing.addEventListener("error", reject, { once: true });
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = src;
-      script.async = true;
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-  }
-
   async function ensureMsal() {
-    if (window.msal) {
-      return;
-    }
-    try {
-      await loadScript(
-        "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js",
-      );
-    } catch (_) {
-      // The explicit check below produces the operator-facing error.
-    }
     if (!window.msal) {
-      throw new Error(
-        "Microsoft login library could not be loaded. Check that the browser can access alcdn.msauth.net or cdn.jsdelivr.net.",
-      );
+      throw new Error("Microsoft login library could not be loaded from the local application assets.");
     }
   }
 

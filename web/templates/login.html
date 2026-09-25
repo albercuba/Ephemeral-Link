@@ -6,7 +6,7 @@
   <title id="login-title">{{.Title}}</title>
   {{if .LogoURL}}<link rel="icon" href="/brand/favicon">{{end}}
   <link id="login-stylesheet" rel="stylesheet" href="/static/app.css">
-  {{if .MicrosoftLoginEnabled}}<script id="login-msal-script" src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>{{end}}
+  {{if .MicrosoftLoginEnabled}}<script id="login-msal-script" src="/static/vendor/msal-browser-2.38.3.min.js"></script>{{end}}
 </head>
 <body id="login-body">
 <main id="login-main" class="page narrow auth-page">

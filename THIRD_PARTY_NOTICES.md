@@ -13,8 +13,8 @@ Ephemeral Link is licensed under the MIT License. This file summarizes notable t
 
 ## Browser libraries
 
-- Microsoft Authentication Library for JavaScript / `@azure/msal-browser` — MIT License
-  - Loaded from Microsoft CDN and/or jsDelivr for Microsoft Entra ID sign-in until a reviewed self-hosted vendor asset is added.
+- Microsoft Authentication Library for JavaScript / `@azure/msal-browser` 2.38.3 — MIT License
+  - Vendored at `web/static/vendor/msal-browser-2.38.3.min.js` for Microsoft Entra ID sign-in.
 
 ## Fonts and icons
 
