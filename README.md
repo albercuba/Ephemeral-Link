@@ -166,6 +166,8 @@ Administrators can manage scoped API keys through the admin API endpoints. The r
 - `GET /admin/api-keys` lists key metadata without hashes or raw values.
 - `POST /admin/api-keys` creates a key with `name`, one or more `scope` values, and an optional Unix `expires_at`; the raw key is returned once.
 - `POST /admin/api-keys/{id}/revoke` revokes a key immediately.
+- `POST /admin/workspace-invitations` creates a one-time workspace invitation and returns the token once.
+- `POST /auth/workspace-invitations/accept` assigns the authenticated user to the invited workspace and role.
 
 Admin management endpoints require the normal administrator session and CSRF token. Keep API keys out of URLs, logs, browser storage, and source control.
 

@@ -51,6 +51,15 @@ type AuditEvent struct {
 	Details     string
 }
 
+type WorkspaceInvitation struct {
+	ID          string
+	WorkspaceID string
+	Email       string
+	Role        string
+	CreatedAt   int64
+	ExpiresAt   int64
+}
+
 type CreatedReceipt struct {
 	Token       string
 	Link        string
@@ -105,6 +114,7 @@ func uploadRequestKey(id string) string     { return "el:upload_request:" + id }
 func auditKey(id string) string             { return "el:audit:" + id }
 func createdReceiptKey(token string) string { return "el:created_receipt:" + token }
 func apiKeyKey(id string) string            { return "el:api_key:" + id }
+func invitationKey(hash string) string      { return "el:workspace_invitation:" + hash }
 
 const auditIndexKey = "el:audit:index"
 const apiKeyPrefix = "elak_"
@@ -334,6 +344,38 @@ func (s *Store) DeleteSession(ctx context.Context, token string) error {
 	return s.rdb.Del(ctx, sessionKey(token)).Err()
 }
 
+func (s *Store) CreateWorkspaceInvitation(ctx context.Context, workspace, email, role string, expiresAt int64) (WorkspaceInvitation, string, error) {
+	value, err := newAPIKeyValue()
+	if err != nil {
+		return WorkspaceInvitation{}, "", err
+	}
+	created := time.Now().Unix()
+	invitation := WorkspaceInvitation{ID: hashAPIKey(value)[:16], WorkspaceID: workspaceID(workspace), Email: strings.ToLower(strings.TrimSpace(email)), Role: role, CreatedAt: created, ExpiresAt: expiresAt}
+	if err := s.rdb.HSet(ctx, invitationKey(hashAPIKey(value)), map[string]any{"id": invitation.ID, "workspace_id": invitation.WorkspaceID, "email": invitation.Email, "role": role, "created_at": created, "expires_at": expiresAt}).Err(); err != nil {
+		return WorkspaceInvitation{}, "", err
+	}
+	return invitation, value, nil
+}
+
+func (s *Store) GetWorkspaceInvitation(ctx context.Context, value string) (WorkspaceInvitation, error) {
+	m, err := s.rdb.HGetAll(ctx, invitationKey(hashAPIKey(value))).Result()
+	if err != nil || len(m) == 0 || (i64(m["expires_at"]) > 0 && i64(m["expires_at"]) <= time.Now().Unix()) {
+		return WorkspaceInvitation{}, ErrInvalidAPIKey
+	}
+	return WorkspaceInvitation{ID: m["id"], WorkspaceID: workspaceID(m["workspace_id"]), Email: m["email"], Role: m["role"], CreatedAt: i64(m["created_at"]), ExpiresAt: i64(m["expires_at"])}, nil
+}
+
+func (s *Store) AcceptWorkspaceInvitation(ctx context.Context, value string) (WorkspaceInvitation, error) {
+	invitation, err := s.GetWorkspaceInvitation(ctx, value)
+	if err != nil {
+		return WorkspaceInvitation{}, err
+	}
+	if err := s.rdb.Del(ctx, invitationKey(hashAPIKey(value))).Err(); err != nil {
+		return WorkspaceInvitation{}, err
+	}
+	return invitation, nil
+}
+
 func newAPIKeyValue() (string, error) {
 	value := make([]byte, 32)
 	if _, err := rand.Read(value); err != nil {
@@ -348,6 +390,10 @@ func hashAPIKey(value string) string {
 }
 
 func (s *Store) CreateAPIKey(ctx context.Context, name string, scopes []string, expiresAt int64) (APIKey, string, error) {
+	return s.CreateAPIKeyInWorkspace(ctx, DefaultWorkspaceID, name, scopes, expiresAt)
+}
+
+func (s *Store) CreateAPIKeyInWorkspace(ctx context.Context, workspace, name string, scopes []string, expiresAt int64) (APIKey, string, error) {
 	value, err := newAPIKeyValue()
 	if err != nil {
 		return APIKey{}, "", err
@@ -358,7 +404,7 @@ func (s *Store) CreateAPIKey(ctx context.Context, name string, scopes []string, 
 	}
 	id := base64.RawURLEncoding.EncodeToString(idBytes)
 	created := time.Now().Unix()
-	key := APIKey{WorkspaceID: DefaultWorkspaceID, ID: id, Name: name, Hash: hashAPIKey(value), Scopes: append([]string(nil), scopes...), CreatedAt: created, ExpiresAt: expiresAt}
+	key := APIKey{WorkspaceID: workspaceID(workspace), ID: id, Name: name, Hash: hashAPIKey(value), Scopes: append([]string(nil), scopes...), CreatedAt: created, ExpiresAt: expiresAt}
 	if err := s.rdb.HSet(ctx, apiKeyKey(id), map[string]any{"workspace_id": key.WorkspaceID, "name": name, "hash": key.Hash, "scopes": strings.Join(scopes, ","), "created_at": created, "expires_at": expiresAt, "revoked_at": 0}).Err(); err != nil {
 		return APIKey{}, "", err
 	}
@@ -524,6 +570,44 @@ func (s *Store) ActiveStorageObjectPaths(ctx context.Context) (map[string]struct
 	}
 	return active, nil
 }
+func (s *Store) MigrateWorkspace(ctx context.Context, from, to string) (int, error) {
+	from = workspaceID(from)
+	to = workspaceID(to)
+	if from == to {
+		return 0, nil
+	}
+	patterns := []string{"el:item:*", "el:upload_request:*", "el:audit:*", "el:user:*", "el:api_key:*"}
+	updated := 0
+	for _, pattern := range patterns {
+		keys, err := s.scanKeys(ctx, pattern)
+		if err != nil {
+			return updated, err
+		}
+		for _, key := range keys {
+			workspace, err := s.rdb.HGet(ctx, key, "workspace_id").Result()
+			if err == redis.Nil {
+				workspace = DefaultWorkspaceID
+			} else if err != nil {
+				return updated, err
+			}
+			if workspace == from {
+				if err := s.rdb.HSet(ctx, key, "workspace_id", to).Err(); err != nil {
+					return updated, err
+				}
+				updated++
+			}
+		}
+	}
+	return updated, nil
+}
+
+func (s *Store) UpdateStorageObjectPath(ctx context.Context, id, path string) error {
+	if id == "" || path == "" {
+		return ErrGone
+	}
+	return s.rdb.HSet(ctx, key(id), "storage_object_path", path).Err()
+}
+
 func (s *Store) BurnItem(ctx context.Context, id string) error {
 	pipe := s.rdb.TxPipeline()
 	pipe.HSet(ctx, key(id), map[string]any{"status": "consumed", "consumed_at": time.Now().Unix(), "wrapped_key_nonce": "", "wrapped_key_ciphertext": "", "payload_nonce": "", "payload_ciphertext": "", "storage_object_path": ""})

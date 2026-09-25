@@ -514,6 +514,53 @@ func (a *App) apiAudit(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]any{"events": events})
 }
 
+func (a *App) adminCreateWorkspaceInvitation(w http.ResponseWriter, r *http.Request) {
+	if _, ok := a.requireAdmin(w, r); !ok {
+		return
+	}
+	email := strings.TrimSpace(r.FormValue("email"))
+	role := strings.TrimSpace(r.FormValue("role"))
+	if email == "" || role == "" || (role != "user" && role != "administrator") {
+		http.Error(w, "invalid invitation", http.StatusBadRequest)
+		return
+	}
+	expiresAt := time.Now().Add(24 * time.Hour).Unix()
+	invitation, value, err := a.store.CreateWorkspaceInvitation(r.Context(), a.workspaceForRequest(r), email, role, expiresAt)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	a.audit(r, "admin_create_workspace_invitation", invitation.ID, "success", "role="+role)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"invitation": value, "id": invitation.ID, "workspace_id": invitation.WorkspaceID, "email": invitation.Email, "role": invitation.Role, "expires_at": invitation.ExpiresAt})
+}
+
+func (a *App) acceptWorkspaceInvitation(w http.ResponseWriter, r *http.Request) {
+	user, ok := a.authenticatedUser(r)
+	if !ok {
+		http.Error(w, "authentication required", http.StatusUnauthorized)
+		return
+	}
+	value := strings.TrimSpace(r.FormValue("invitation"))
+	invitation, err := a.store.GetWorkspaceInvitation(r.Context(), value)
+	if err != nil || (invitation.Email != "" && !strings.EqualFold(invitation.Email, user.Email)) {
+		http.Error(w, "invalid invitation", http.StatusForbidden)
+		return
+	}
+	if invitation, err = a.store.AcceptWorkspaceInvitation(r.Context(), value); err != nil {
+		http.Error(w, "invalid invitation", http.StatusForbidden)
+		return
+	}
+	user.WorkspaceID = invitation.WorkspaceID
+	user.Role = invitation.Role
+	if err := a.store.SaveUser(r.Context(), *user); err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	a.auditAs(r, user.Username, "accept_workspace_invitation", invitation.ID, "success", "workspace="+invitation.WorkspaceID)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
 func (a *App) adminAPIKeys(w http.ResponseWriter, r *http.Request) {
 	if _, ok := a.requireAdmin(w, r); !ok {
 		return
@@ -553,7 +600,7 @@ func (a *App) adminCreateAPIKey(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	key, value, err := a.store.CreateAPIKey(r.Context(), name, scopes, expiresAt)
+	key, value, err := a.store.CreateAPIKeyInWorkspace(r.Context(), a.workspaceForRequest(r), name, scopes, expiresAt)
 	if err != nil {
 		a.bad(w, r, err)
 		return
@@ -718,7 +765,7 @@ func (a *App) adminAuditCSV(w http.ResponseWriter, r *http.Request) {
 	if _, ok := a.requireAdmin(w, r); !ok {
 		return
 	}
-	events, err := a.store.ListAuditEvents(r.Context(), 500)
+	events, err := a.store.ListAuditEventsInWorkspace(r.Context(), 500, a.workspaceForRequest(r))
 	if err != nil {
 		a.bad(w, r, err)
 		return
@@ -812,7 +859,11 @@ func (a *App) adminBurnLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := chi.URLParam(r, "id")
-	item, _ := a.store.Get(r.Context(), id)
+	item, err := a.store.Get(r.Context(), id)
+	if err != nil || item.WorkspaceID != a.workspaceForRequest(r) {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
 	if err := a.store.BurnItem(r.Context(), id); err != nil {
 		a.bad(w, r, err)
 		return
@@ -829,6 +880,11 @@ func (a *App) adminBurnUploadRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := chi.URLParam(r, "id")
+	req, err := a.store.GetUploadRequest(r.Context(), id)
+	if err != nil || req.WorkspaceID != a.workspaceForRequest(r) {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
 	if err := a.store.BurnUploadRequest(r.Context(), id); err != nil {
 		a.bad(w, r, err)
 		return
@@ -855,6 +911,10 @@ func (a *App) adminSaveUser(w http.ResponseWriter, r *http.Request) {
 	email := strings.TrimSpace(r.FormValue("email"))
 	password := r.FormValue("password")
 	existing, _ := a.store.GetUser(r.Context(), username)
+	if existing.CreatedAt != 0 && existing.WorkspaceID != a.workspaceForRequest(r) {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
 	if existing.CreatedAt != 0 && existing.PasswordHash == "" {
 		http.Redirect(w, r, "/admin#manage-users", 303)
 		return
@@ -876,7 +936,7 @@ func (a *App) adminSaveUser(w http.ResponseWriter, r *http.Request) {
 	if createdAt == 0 {
 		createdAt = time.Now().Unix()
 	}
-	if err := a.store.SaveUser(r.Context(), redisstore.User{Username: username, PasswordHash: hash, Role: role, FirstName: firstName, LastName: lastName, Email: email, CreatedAt: createdAt}); err != nil {
+	if err := a.store.SaveUser(r.Context(), redisstore.User{WorkspaceID: a.workspaceForRequest(r), Username: username, PasswordHash: hash, Role: role, FirstName: firstName, LastName: lastName, Email: email, CreatedAt: createdAt}); err != nil {
 		a.bad(w, r, err)
 		return
 	}
@@ -899,7 +959,7 @@ func (a *App) adminDeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user, _ := a.store.GetUser(r.Context(), username)
-	if user.PasswordHash == "" {
+	if user.WorkspaceID != a.workspaceForRequest(r) || user.PasswordHash == "" {
 		http.Redirect(w, r, "/admin#manage-users", 303)
 		return
 	}

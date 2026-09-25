@@ -170,6 +170,18 @@ Before production use:
 5. Remove or lock down any unused accounts.
 6. Ensure admin users have email addresses if they need upload-request notifications.
 
+## Workspace membership and migration
+
+Every Redis record now carries a workspace ID. Existing records normalize to `DEFAULT_WORKSPACE_ID` (normally `default`). Administrators can create one-time, expiring invitations with `POST /admin/workspace-invitations`; the invited authenticated user accepts with `POST /auth/workspace-invitations/accept`. Invitations are email-bound when an email is supplied and assign the configured workspace role.
+
+Use the workspace migration tool after reviewing the target workspace:
+
+```sh
+go run ./cmd/migrate-workspaces -from default -to team-a
+```
+
+Administrative listings, burns, audit exports, and API-key audit reporting enforce the current workspace. Anonymous opaque links remain accessible by possession of the link, intentionally preserving the single-use sharing model.
+
 ## Local Active Directory authentication
 
 The optional Local AD integration authenticates users against the configured LDAP endpoint and creates a local session without storing the directory password. Configure it from Admin → Microsoft Local AD Integration:

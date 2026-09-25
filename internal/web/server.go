@@ -162,6 +162,7 @@ func (a *App) Routes() http.Handler {
 	r.Get("/auth/microsoft/callback", a.microsoftCallback)
 	r.Get("/auth/ad", a.adLogin)
 	r.Post("/auth/ad", a.adPost)
+	r.Post("/auth/workspace-invitations/accept", a.acceptWorkspaceInvitation)
 	r.Group(func(r chi.Router) {
 		r.Use(a.requireAuth)
 		r.Get("/", a.home)
@@ -176,6 +177,7 @@ func (a *App) Routes() http.Handler {
 		r.Get("/admin", a.admin)
 		r.Get("/admin/api-keys", a.adminAPIKeys)
 		r.Post("/admin/api-keys", a.adminCreateAPIKey)
+		r.Post("/admin/workspace-invitations", a.adminCreateWorkspaceInvitation)
 		r.Post("/admin/api-keys/{id}/revoke", a.adminRevokeAPIKey)
 		r.Get("/admin/audit.csv", a.adminAuditCSV)
 		r.Post("/admin/links/{id}/burn", a.adminBurnLink)

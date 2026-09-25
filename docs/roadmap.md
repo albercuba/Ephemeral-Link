@@ -245,8 +245,8 @@ These are larger feature goals after the hardening roadmap:
 
 - [x] S3-compatible encrypted file storage backend.
 - [x] Scoped, revocable REST API keys.
-- [ ] User/workspace isolation.
+- [x] User/workspace isolation.
 - [x] Custom domains.
 - [x] Expanded administrative reporting.
 
-API-key reporting currently exposes metadata-only audit events through `/api/v1/audit`. S3 storage now supports streaming uploads/downloads and orphan cleanup; active local objects require a documented migration window before switching backends. Workspace isolation now carries workspace metadata, scopes admin listings, and scopes API-key audit access, but full multi-workspace administration remains to be completed. Custom-domain support uses an exact `CUSTOM_DOMAINS` allowlist with `APP_BASE_URL` fallback.
+API-key reporting currently exposes metadata-only audit events through `/api/v1/audit`. S3 storage now supports streaming uploads/downloads and orphan cleanup; active local objects can be migrated with `cmd/migrate-storage` without deleting the source. Workspace isolation includes workspace metadata migration, one-time invitations, workspace roles, workspace-scoped admin listings/burns/audit/API-key reporting, and `cmd/migrate-workspaces`. Anonymous opaque links remain intentionally possession-based. Custom-domain support uses an exact `CUSTOM_DOMAINS` allowlist with `APP_BASE_URL` fallback.
