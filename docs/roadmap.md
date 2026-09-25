@@ -84,9 +84,9 @@ Status: implemented in `internal/web/auth.go` and `internal/redisstore/store.go`
 
 - [x] Replace custom JWT/JWKS validation with a maintained library or hardened verifier.
 - [x] Validate issuer, audience, expiry, algorithm, key ID, and nonce where applicable.
-- [ ] Add tests for invalid audience/issuer/expiry/signature.
+- [x] Add tests for invalid audience/issuer/expiry/signature.
 
-Status: hardened verifier in `internal/web/auth.go` validates RS256, key ID, RSA signing keys, issuer, audience, expiry, not-before, signature, and nonce where applicable; tests still needed.
+Status: hardened verifier in `internal/web/auth.go` validates RS256, key ID, RSA signing keys, issuer, audience, expiry, not-before, signature, and nonce where applicable; tests cover valid tokens plus invalid audience, issuer, expiry, signature, and nonce.
 
 ### 2.3 Remove `KEYS` from hot paths
 
