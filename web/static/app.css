@@ -115,7 +115,7 @@ textarea {
 
 .lang .fa-language {
     color: var(--muted);
-    font-size: 1.6rem;
+    font-size: 1rem;
     line-height: 1;
     pointer-events: none;
 }
@@ -162,6 +162,11 @@ textarea {
 .theme-toggle {
     width: 3rem;
     height: 3rem;
+}
+
+.lang-toggle {
+    width: 2.25rem;
+    height: 2.25rem;
 }
 
 .theme-toggle i {
