@@ -51,6 +51,12 @@ type AuditEvent struct {
 	Details     string
 }
 
+type WorkspaceMembership struct {
+	Username    string
+	WorkspaceID string
+	Role        string
+}
+
 type WorkspaceInvitation struct {
 	ID          string
 	WorkspaceID string
@@ -115,6 +121,9 @@ func auditKey(id string) string             { return "el:audit:" + id }
 func createdReceiptKey(token string) string { return "el:created_receipt:" + token }
 func apiKeyKey(id string) string            { return "el:api_key:" + id }
 func invitationKey(hash string) string      { return "el:workspace_invitation:" + hash }
+func membershipKey(username, workspace string) string {
+	return "el:membership:" + username + ":" + workspace
+}
 
 const auditIndexKey = "el:audit:index"
 const apiKeyPrefix = "elak_"
@@ -341,7 +350,43 @@ func (s *Store) GetSession(ctx context.Context, token string) (string, error) {
 	return username, err
 }
 func (s *Store) DeleteSession(ctx context.Context, token string) error {
-	return s.rdb.Del(ctx, sessionKey(token)).Err()
+	return s.rdb.Del(ctx, sessionKey(token), "el:session_workspace:"+token).Err()
+}
+
+func (s *Store) AddWorkspaceMembership(ctx context.Context, username, workspace, role string) error {
+	return s.rdb.HSet(ctx, membershipKey(username, workspaceID(workspace)), map[string]any{"username": username, "workspace_id": workspaceID(workspace), "role": role}).Err()
+}
+
+func (s *Store) HasWorkspaceMembership(ctx context.Context, username, workspace string) (bool, error) {
+	count, err := s.rdb.Exists(ctx, membershipKey(username, workspaceID(workspace))).Result()
+	return count > 0, err
+}
+
+func (s *Store) ListWorkspaceMemberships(ctx context.Context, username string) ([]WorkspaceMembership, error) {
+	keys, err := s.scanKeys(ctx, "el:membership:"+username+":*")
+	if err != nil {
+		return nil, err
+	}
+	memberships := make([]WorkspaceMembership, 0, len(keys))
+	for _, key := range keys {
+		m, err := s.rdb.HGetAll(ctx, key).Result()
+		if err == nil && len(m) > 0 {
+			memberships = append(memberships, WorkspaceMembership{Username: m["username"], WorkspaceID: workspaceID(m["workspace_id"]), Role: m["role"]})
+		}
+	}
+	return memberships, nil
+}
+
+func (s *Store) SetSessionWorkspace(ctx context.Context, token, workspace string) error {
+	return s.rdb.Set(ctx, "el:session_workspace:"+token, workspaceID(workspace), 8*time.Hour).Err()
+}
+
+func (s *Store) GetSessionWorkspace(ctx context.Context, token string) (string, error) {
+	value, err := s.rdb.Get(ctx, "el:session_workspace:"+token).Result()
+	if err == redis.Nil {
+		return "", ErrGone
+	}
+	return value, err
 }
 
 func (s *Store) CreateWorkspaceInvitation(ctx context.Context, workspace, email, role string, expiresAt int64) (WorkspaceInvitation, string, error) {
@@ -593,6 +638,15 @@ func (s *Store) MigrateWorkspace(ctx context.Context, from, to string) (int, err
 			if workspace == from {
 				if err := s.rdb.HSet(ctx, key, "workspace_id", to).Err(); err != nil {
 					return updated, err
+				}
+				if strings.HasPrefix(key, "el:user:") {
+					username, err := s.rdb.HGet(ctx, key, "username").Result()
+					if err == nil {
+						role, _ := s.rdb.HGet(ctx, key, "role").Result()
+						if err := s.AddWorkspaceMembership(ctx, username, to, role); err != nil {
+							return updated, err
+						}
+					}
 				}
 				updated++
 			}

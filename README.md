@@ -168,6 +168,8 @@ Administrators can manage scoped API keys through the admin API endpoints. The r
 - `POST /admin/api-keys/{id}/revoke` revokes a key immediately.
 - `POST /admin/workspace-invitations` creates a one-time workspace invitation and returns the token once.
 - `POST /auth/workspace-invitations/accept` assigns the authenticated user to the invited workspace and role.
+- `GET /account/workspaces` lists the authenticated user’s memberships and active workspace.
+- `POST /account/workspaces/switch` changes the active workspace for the current session only.
 
 Admin management endpoints require the normal administrator session and CSRF token. Keep API keys out of URLs, logs, browser storage, and source control.
 

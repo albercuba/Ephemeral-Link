@@ -167,6 +167,8 @@ func (a *App) Routes() http.Handler {
 		r.Use(a.requireAuth)
 		r.Get("/", a.home)
 		r.Post("/language", a.language)
+		r.Get("/account/workspaces", a.listWorkspaces)
+		r.Post("/account/workspaces/switch", a.switchWorkspace)
 		r.Post("/create", a.create)
 		r.Post("/secrets/text", a.createText)
 		r.Post("/secrets/file", a.createFile)

@@ -450,6 +450,14 @@ func (a *App) authenticatedUser(r *http.Request) (*redisstore.User, bool) {
 	if err != nil {
 		return nil, false
 	}
+	if workspace, workspaceErr := a.store.GetSessionWorkspace(r.Context(), c.Value); workspaceErr == nil {
+		if member, membershipErr := a.store.HasWorkspaceMembership(r.Context(), username, workspace); membershipErr == nil && member {
+			user.WorkspaceID = workspace
+		}
+	}
+	if member, membershipErr := a.store.HasWorkspaceMembership(r.Context(), username, user.WorkspaceID); membershipErr == nil && !member {
+		_ = a.store.AddWorkspaceMembership(r.Context(), username, user.WorkspaceID, user.Role)
+	}
 	return &user, true
 }
 
@@ -551,6 +559,10 @@ func (a *App) acceptWorkspaceInvitation(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "invalid invitation", http.StatusForbidden)
 		return
 	}
+	if err := a.store.AddWorkspaceMembership(r.Context(), user.Username, invitation.WorkspaceID, invitation.Role); err != nil {
+		a.bad(w, r, err)
+		return
+	}
 	user.WorkspaceID = invitation.WorkspaceID
 	user.Role = invitation.Role
 	if err := a.store.SaveUser(r.Context(), *user); err != nil {
@@ -622,6 +634,49 @@ func (a *App) adminRevokeAPIKey(w http.ResponseWriter, r *http.Request) {
 	a.audit(r, "admin_revoke_api_key", id, "success", "")
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
+}
+
+func (a *App) listWorkspaces(w http.ResponseWriter, r *http.Request) {
+	user, ok := currentUser(r)
+	if !ok {
+		http.Error(w, "authentication required", http.StatusUnauthorized)
+		return
+	}
+	memberships, err := a.store.ListWorkspaceMemberships(r.Context(), user.Username)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"active": user.WorkspaceID, "memberships": memberships})
+}
+
+func (a *App) switchWorkspace(w http.ResponseWriter, r *http.Request) {
+	user, ok := currentUser(r)
+	if !ok {
+		http.Error(w, "authentication required", http.StatusUnauthorized)
+		return
+	}
+	workspace := strings.TrimSpace(r.FormValue("workspace_id"))
+	member, err := a.store.HasWorkspaceMembership(r.Context(), user.Username, workspace)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	if !member {
+		http.Error(w, "workspace access denied", http.StatusForbidden)
+		return
+	}
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil || cookie.Value == "" {
+		http.Error(w, "authentication required", http.StatusUnauthorized)
+		return
+	}
+	if err := a.store.SetSessionWorkspace(r.Context(), cookie.Value, workspace); err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	http.Redirect(w, r, referer(r), http.StatusSeeOther)
 }
 
 func (a *App) admin(w http.ResponseWriter, r *http.Request) {

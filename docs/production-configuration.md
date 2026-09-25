@@ -172,7 +172,7 @@ Before production use:
 
 ## Workspace membership and migration
 
-Every Redis record now carries a workspace ID. Existing records normalize to `DEFAULT_WORKSPACE_ID` (normally `default`). Administrators can create one-time, expiring invitations with `POST /admin/workspace-invitations`; the invited authenticated user accepts with `POST /auth/workspace-invitations/accept`. Invitations are email-bound when an email is supplied and assign the configured workspace role.
+Every Redis record now carries a workspace ID. Existing records normalize to `DEFAULT_WORKSPACE_ID` (normally `default`). Administrators can create one-time, expiring invitations with `POST /admin/workspace-invitations`; the invited authenticated user accepts with `POST /auth/workspace-invitations/accept`. Invitations are email-bound when an email is supplied and assign the configured workspace role. Users can inspect memberships with `GET /account/workspaces` and switch the active workspace for only their current session with `POST /account/workspaces/switch`.
 
 Use the workspace migration tool after reviewing the target workspace:
 
