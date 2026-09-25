@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -230,7 +231,19 @@ func (a *App) microsoftPost(w http.ResponseWriter, r *http.Request) {
 		email = strings.TrimSpace(claims.UPN)
 	}
 	first, last := splitName(claims.Name)
-	existing, _ := a.store.GetUser(r.Context(), username)
+	existing, err := a.store.GetUser(r.Context(), username)
+	if err == nil && existing.AuthProvider != "" && existing.AuthProvider != "microsoft" {
+		a.audit(r, "microsoft_login", username, "denied", "local account collision")
+		http.Error(w, a.t(r, "microsoft_group_access_denied"), http.StatusForbidden)
+		return
+	}
+	if err != nil {
+		existing, err = a.migrateLegacyMicrosoftUser(r.Context(), username, objectID, email)
+		if err != nil && !errors.Is(err, redisstore.ErrGone) {
+			a.bad(w, r, err)
+			return
+		}
+	}
 	createdAt := existing.CreatedAt
 	if createdAt == 0 {
 		createdAt = time.Now().Unix()
@@ -258,6 +271,35 @@ func (a *App) microsoftPost(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{Name: sessionCookieName, Value: session, Path: "/", MaxAge: int(sessionTTL.Seconds()), HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: a.cfg.SecureCookies})
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
+}
+
+func (a *App) migrateLegacyMicrosoftUser(ctx context.Context, username, objectID, email string) (redisstore.User, error) {
+	users, err := a.store.ListUsers(ctx)
+	if err != nil {
+		return redisstore.User{}, err
+	}
+	for _, user := range users {
+		if user.AuthProvider != "microsoft" || user.Username == username {
+			continue
+		}
+		matchesObjectID := objectID != "" && user.ExternalID == objectID
+		matchesLegacyEmail := user.ExternalID == "" && email != "" && strings.EqualFold(user.Email, email)
+		if !matchesObjectID && !matchesLegacyEmail {
+			continue
+		}
+		legacyUsername := user.Username
+		user.Username = username
+		user.ExternalID = objectID
+		user.AuthProvider = "microsoft"
+		if err := a.store.SaveUser(ctx, user); err != nil {
+			return redisstore.User{}, err
+		}
+		if err := a.store.DeleteUser(ctx, legacyUsername); err != nil {
+			return redisstore.User{}, err
+		}
+		return user, nil
+	}
+	return redisstore.User{}, redisstore.ErrGone
 }
 
 func (a *App) microsoftLogin(w http.ResponseWriter, r *http.Request) {

@@ -75,10 +75,10 @@ Status: implemented in `internal/web/auth.go`; tests still needed.
 - [x] Store Entra users under stable object ID (`oid`) instead of mutable usernames/emails.
 - [x] Prevent accidental merge with local accounts.
 - [x] Preserve display names/emails as metadata only.
-- [ ] Add migration/compatibility handling for existing Entra users.
-- [ ] Add tests for Entra/local account separation.
+- [x] Add migration/compatibility handling for existing Entra users.
+- [x] Add tests for Entra/local account separation.
 
-Status: implemented in `internal/web/auth.go` and `internal/redisstore/store.go`; migration and tests still needed.
+Status: implemented in `internal/web/auth.go` and `internal/redisstore/store.go`; legacy Microsoft-user migration and local-account separation coverage is in `internal/web/handler_test.go`.
 
 ### 2.2 Replace hand-rolled JWT validation
 

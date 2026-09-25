@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -41,6 +42,36 @@ func withRouteID(request *http.Request, id string) *http.Request {
 	route := chi.NewRouteContext()
 	route.URLParams.Add("id", id)
 	return request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, route))
+}
+
+func TestMigrateLegacyMicrosoftUserDoesNotMergeLocalAccounts(t *testing.T) {
+	app, store, _, _ := newHandlerTestApp(t)
+	ctx := context.Background()
+	legacy := redisstore.User{Username: "legacy@example.com", Email: "legacy@example.com", AuthProvider: "microsoft", Role: "user", CreatedAt: 10}
+	local := redisstore.User{Username: "entra:oid-local", Email: "legacy@example.com", AuthProvider: "local", Role: "administrator", CreatedAt: 11}
+	if err := store.SaveUser(ctx, legacy); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveUser(ctx, local); err != nil {
+		t.Fatal(err)
+	}
+	migrated, err := app.migrateLegacyMicrosoftUser(ctx, "entra:oid-new", "oid-new", "legacy@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if migrated.Username != "entra:oid-new" || migrated.ExternalID != "oid-new" || migrated.AuthProvider != "microsoft" {
+		t.Fatalf("migrated user = %#v", migrated)
+	}
+	if _, err := store.GetUser(ctx, "legacy@example.com"); !errors.Is(err, redisstore.ErrGone) {
+		t.Fatalf("legacy user was not removed: %v", err)
+	}
+	untouched, err := store.GetUser(ctx, "entra:oid-local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if untouched.Role != "administrator" || untouched.AuthProvider != "local" {
+		t.Fatalf("local account was changed: %#v", untouched)
+	}
 }
 
 func TestRedirectCreatedStoresShortLivedReceipt(t *testing.T) {
