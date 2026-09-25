@@ -490,7 +490,8 @@ func (a *App) apiAudit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "authentication required", http.StatusUnauthorized)
 		return
 	}
-	if _, err := a.store.AuthenticateAPIKey(r.Context(), strings.TrimSpace(strings.TrimPrefix(authorization, "Bearer ")), "reports:read"); err != nil {
+	apiKey, err := a.store.AuthenticateAPIKey(r.Context(), strings.TrimSpace(strings.TrimPrefix(authorization, "Bearer ")), "reports:read")
+	if err != nil {
 		http.Error(w, "authentication required", http.StatusUnauthorized)
 		return
 	}
@@ -503,7 +504,7 @@ func (a *App) apiAudit(w http.ResponseWriter, r *http.Request) {
 		}
 		limit = parsed
 	}
-	events, err := a.store.ListAuditEvents(r.Context(), int64(limit))
+	events, err := a.store.ListAuditEventsInWorkspace(r.Context(), int64(limit), apiKey.WorkspaceID)
 	if err != nil {
 		a.bad(w, r, err)
 		return
@@ -581,12 +582,13 @@ func (a *App) admin(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	items, err := a.store.ListAvailableItems(r.Context())
+	workspace := a.workspaceForRequest(r)
+	items, err := a.store.ListAvailableItemsInWorkspace(r.Context(), workspace)
 	if err != nil {
 		a.bad(w, r, err)
 		return
 	}
-	uploadRequests, err := a.store.ListAvailableUploadRequests(r.Context())
+	uploadRequests, err := a.store.ListAvailableUploadRequestsInWorkspace(r.Context(), workspace)
 	if err != nil {
 		a.bad(w, r, err)
 		return
@@ -601,7 +603,7 @@ func (a *App) admin(w http.ResponseWriter, r *http.Request) {
 		a.bad(w, r, err)
 		return
 	}
-	allAuditEvents, err := a.store.ListAuditEvents(r.Context(), 500)
+	allAuditEvents, err := a.store.ListAuditEventsInWorkspace(r.Context(), 500, workspace)
 	if err != nil {
 		a.bad(w, r, err)
 		return

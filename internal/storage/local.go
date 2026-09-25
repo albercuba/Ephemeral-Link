@@ -31,8 +31,8 @@ func (l *Local) Write(id string, data []byte) (string, error) {
 	}
 	return p, nil
 }
-func (l *Local) Read(path string) ([]byte, error)   { return os.ReadFile(path) }
-func (l *Local) Open(path string) (*os.File, error) { return os.Open(path) }
+func (l *Local) Read(path string) ([]byte, error)        { return os.ReadFile(path) }
+func (l *Local) Open(path string) (io.ReadCloser, error) { return os.Open(path) }
 func (l *Local) WriteStream(id string, write func(io.Writer) error) (string, error) {
 	p := l.Path(id)
 	tmp := p + ".tmp"

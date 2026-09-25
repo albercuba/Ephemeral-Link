@@ -130,6 +130,10 @@ Production recommendations:
 
 ## File storage
 
+The default `local` backend stores encrypted payloads under `STORAGE_PATH`. For S3-compatible storage, set `STORAGE_BACKEND=s3`, configure the endpoint, credentials, bucket, and prefix, and keep `S3_SECURE=true` unless the endpoint is an explicitly isolated development service. Uploads use streaming multipart S3 writes; downloads use streaming object readers. Cleanup removes expired objects and objects not referenced by active Redis metadata.
+
+S3 migration is additive: existing local object references remain readable only while the local backend is configured. Migrate active objects and their Redis `storage_object_path` values together during a maintenance window; never delete the local backend until active links have been verified.
+
 Uploaded files are encrypted before being written to `STORAGE_PATH` as `.bin` files. Original filenames are stored as sanitized metadata and are never used as filesystem paths.
 
 Production recommendations:

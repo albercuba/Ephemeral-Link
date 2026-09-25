@@ -13,6 +13,14 @@ type Config struct {
 	AppBaseURL          string
 	RedisURL            string
 	StoragePath         string
+	StorageBackend      string
+	S3Endpoint          string
+	S3AccessKey         string
+	S3SecretKey         string
+	S3SessionToken      string
+	S3Bucket            string
+	S3Prefix            string
+	S3Secure            bool
 	MaxTextSecretSize   int64
 	MaxFileSize         int64
 	DefaultTTL          time.Duration
@@ -24,6 +32,7 @@ type Config struct {
 	SecureCookies       bool
 	TrustedProxies      []string
 	CustomDomains       []string
+	DefaultWorkspaceID  string
 }
 
 func Load() (Config, error) {
@@ -31,6 +40,14 @@ func Load() (Config, error) {
 		AppBaseURL:         env("APP_BASE_URL", "http://localhost:8080"),
 		RedisURL:           env("REDIS_URL", "redis://localhost:6379/0"),
 		StoragePath:        env("STORAGE_PATH", "./data/storage"),
+		StorageBackend:     strings.ToLower(env("STORAGE_BACKEND", "local")),
+		S3Endpoint:         env("S3_ENDPOINT", ""),
+		S3AccessKey:        env("S3_ACCESS_KEY", ""),
+		S3SecretKey:        env("S3_SECRET_KEY", ""),
+		S3SessionToken:     env("S3_SESSION_TOKEN", ""),
+		S3Bucket:           env("S3_BUCKET", ""),
+		S3Prefix:           env("S3_PREFIX", "ephemeral-link"),
+		S3Secure:           strings.EqualFold(env("S3_SECURE", "true"), "true"),
 		MaxTextSecretSize:  envInt64("MAX_TEXT_SECRET_SIZE", 64*1024),
 		MaxFileSize:        envInt64("MAX_FILE_SIZE", 10*1024*1024),
 		DefaultTTL:         time.Duration(envInt64("DEFAULT_TTL_SECONDS", 3600)) * time.Second,
@@ -41,6 +58,7 @@ func Load() (Config, error) {
 		SecureCookies:      strings.EqualFold(env("SECURE_COOKIES", "false"), "true"),
 		TrustedProxies:     split(env("TRUSTED_PROXIES", "")),
 		CustomDomains:      split(env("CUSTOM_DOMAINS", "")),
+		DefaultWorkspaceID: env("DEFAULT_WORKSPACE_ID", "default"),
 	}
 	key, err := loadMasterKey(env("ENCRYPTION_MASTER_KEY", ""))
 	if err != nil {

@@ -15,8 +15,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+const DefaultWorkspaceID = "default"
+
 type Item struct {
 	ID                   string
+	WorkspaceID          string
 	Type                 string
 	Status               string
 	CreatedAt            int64
@@ -37,14 +40,15 @@ type Item struct {
 }
 
 type AuditEvent struct {
-	ID        string
-	CreatedAt int64
-	Actor     string
-	IP        string
-	Event     string
-	Target    string
-	Result    string
-	Details   string
+	WorkspaceID string
+	ID          string
+	CreatedAt   int64
+	Actor       string
+	IP          string
+	Event       string
+	Target      string
+	Result      string
+	Details     string
 }
 
 type CreatedReceipt struct {
@@ -56,13 +60,14 @@ type CreatedReceipt struct {
 }
 
 type APIKey struct {
-	ID        string
-	Name      string
-	Hash      string
-	Scopes    []string
-	CreatedAt int64
-	ExpiresAt int64
-	RevokedAt int64
+	WorkspaceID string
+	ID          string
+	Name        string
+	Hash        string
+	Scopes      []string
+	CreatedAt   int64
+	ExpiresAt   int64
+	RevokedAt   int64
 }
 
 var ErrInvalidAPIKey = errors.New("invalid api key")
@@ -106,7 +111,7 @@ const apiKeyPrefix = "elak_"
 
 func (s *Store) Create(ctx context.Context, item Item, ttl time.Duration) error {
 	m := map[string]any{
-		"id": item.ID, "type": item.Type, "status": "available", "created_at": item.CreatedAt, "expires_at": item.ExpiresAt, "created_by": item.CreatedBy, "direction": item.Direction,
+		"id": item.ID, "workspace_id": workspaceID(item.WorkspaceID), "type": item.Type, "status": "available", "created_at": item.CreatedAt, "expires_at": item.ExpiresAt, "created_by": item.CreatedBy, "direction": item.Direction,
 		"has_passphrase": boolString(item.HasPassphrase), "passphrase_hash": item.PassphraseHash,
 		"wrapped_key_nonce": item.WrappedKeyNonce, "wrapped_key_ciphertext": item.WrappedKeyCiphertext,
 		"payload_nonce": item.PayloadNonce, "payload_ciphertext": item.PayloadCiphertext,
@@ -169,9 +174,16 @@ func parseMap(m map[string]string, err error) (Item, error) {
 	if direction == "" {
 		direction = "send"
 	}
-	return Item{ID: m["id"], Type: m["type"], Status: m["status"], CreatedAt: i64(m["created_at"]), ExpiresAt: i64(m["expires_at"]), CreatedBy: m["created_by"], Direction: direction, HasPassphrase: m["has_passphrase"] == "true", PassphraseHash: m["passphrase_hash"], WrappedKeyNonce: m["wrapped_key_nonce"], WrappedKeyCiphertext: m["wrapped_key_ciphertext"], PayloadNonce: m["payload_nonce"], PayloadCiphertext: m["payload_ciphertext"], OriginalFilename: m["original_filename"], SanitizedFilename: m["sanitized_filename"], FileSize: i64(m["file_size"]), MimeType: m["mime_type"], StorageObjectPath: m["storage_object_path"]}, nil
+	return Item{ID: m["id"], WorkspaceID: workspaceID(m["workspace_id"]), Type: m["type"], Status: m["status"], CreatedAt: i64(m["created_at"]), ExpiresAt: i64(m["expires_at"]), CreatedBy: m["created_by"], Direction: direction, HasPassphrase: m["has_passphrase"] == "true", PassphraseHash: m["passphrase_hash"], WrappedKeyNonce: m["wrapped_key_nonce"], WrappedKeyCiphertext: m["wrapped_key_ciphertext"], PayloadNonce: m["payload_nonce"], PayloadCiphertext: m["payload_ciphertext"], OriginalFilename: m["original_filename"], SanitizedFilename: m["sanitized_filename"], FileSize: i64(m["file_size"]), MimeType: m["mime_type"], StorageObjectPath: m["storage_object_path"]}, nil
 }
 func i64(s string) int64 { n, _ := strconv.ParseInt(s, 10, 64); return n }
+func workspaceID(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return DefaultWorkspaceID
+	}
+	return strings.TrimSpace(value)
+}
+
 func boolString(b bool) string {
 	if b {
 		return "true"
@@ -180,6 +192,7 @@ func boolString(b bool) string {
 }
 
 type User struct {
+	WorkspaceID  string
 	Username     string
 	PasswordHash string
 	Role         string
@@ -192,6 +205,7 @@ type User struct {
 }
 
 type UploadRequest struct {
+	WorkspaceID    string
 	ID             string
 	Status         string
 	CreatedAt      int64
@@ -344,8 +358,8 @@ func (s *Store) CreateAPIKey(ctx context.Context, name string, scopes []string, 
 	}
 	id := base64.RawURLEncoding.EncodeToString(idBytes)
 	created := time.Now().Unix()
-	key := APIKey{ID: id, Name: name, Hash: hashAPIKey(value), Scopes: append([]string(nil), scopes...), CreatedAt: created, ExpiresAt: expiresAt}
-	if err := s.rdb.HSet(ctx, apiKeyKey(id), map[string]any{"name": name, "hash": key.Hash, "scopes": strings.Join(scopes, ","), "created_at": created, "expires_at": expiresAt, "revoked_at": 0}).Err(); err != nil {
+	key := APIKey{WorkspaceID: DefaultWorkspaceID, ID: id, Name: name, Hash: hashAPIKey(value), Scopes: append([]string(nil), scopes...), CreatedAt: created, ExpiresAt: expiresAt}
+	if err := s.rdb.HSet(ctx, apiKeyKey(id), map[string]any{"workspace_id": key.WorkspaceID, "name": name, "hash": key.Hash, "scopes": strings.Join(scopes, ","), "created_at": created, "expires_at": expiresAt, "revoked_at": 0}).Err(); err != nil {
 		return APIKey{}, "", err
 	}
 	return key, value, nil
@@ -405,7 +419,7 @@ func apiKeyFromMap(key string, m map[string]string) APIKey {
 			scopes = append(scopes, scope)
 		}
 	}
-	return APIKey{ID: id, Name: m["name"], Hash: m["hash"], Scopes: scopes, CreatedAt: i64(m["created_at"]), ExpiresAt: i64(m["expires_at"]), RevokedAt: i64(m["revoked_at"])}
+	return APIKey{WorkspaceID: workspaceID(m["workspace_id"]), ID: id, Name: m["name"], Hash: m["hash"], Scopes: scopes, CreatedAt: i64(m["created_at"]), ExpiresAt: i64(m["expires_at"]), RevokedAt: i64(m["revoked_at"])}
 }
 
 func containsString(values []string, wanted string) bool {
@@ -477,6 +491,10 @@ func (s *Store) ResetFailures(ctx context.Context, scope, identity string) error
 }
 
 func (s *Store) ListAvailableItems(ctx context.Context) ([]Item, error) {
+	return s.ListAvailableItemsInWorkspace(ctx, "")
+}
+
+func (s *Store) ListAvailableItemsInWorkspace(ctx context.Context, workspace string) ([]Item, error) {
 	keys, err := s.scanKeys(ctx, "el:item:*")
 	if err != nil {
 		return nil, err
@@ -485,7 +503,7 @@ func (s *Store) ListAvailableItems(ctx context.Context) ([]Item, error) {
 	out := []Item{}
 	for _, k := range keys {
 		item, err := parse(s.rdb.HGetAll(ctx, k).Result())
-		if err == nil && item.Status == "available" && item.ExpiresAt > now {
+		if err == nil && item.Status == "available" && item.ExpiresAt > now && (workspace == "" || item.WorkspaceID == workspace) {
 			out = append(out, item)
 		}
 	}
@@ -517,7 +535,7 @@ func (s *Store) BurnUploadRequest(ctx context.Context, id string) error {
 	return s.rdb.HSet(ctx, uploadRequestKey(id), "status", "consumed", "consumed_at", time.Now().Unix()).Err()
 }
 func (s *Store) CreateUploadRequest(ctx context.Context, req UploadRequest, ttl time.Duration) error {
-	m := map[string]any{"id": req.ID, "status": "available", "created_at": req.CreatedAt, "expires_at": req.ExpiresAt, "requested_by": req.RequestedBy, "requester_email": req.RequesterEmail, "recipient_email": req.RecipientEmail, "message": req.Message, "uploaded_item_id": req.UploadedItemID, "uploaded_at": req.UploadedAt}
+	m := map[string]any{"id": req.ID, "workspace_id": workspaceID(req.WorkspaceID), "status": "available", "created_at": req.CreatedAt, "expires_at": req.ExpiresAt, "requested_by": req.RequestedBy, "requester_email": req.RequesterEmail, "recipient_email": req.RecipientEmail, "message": req.Message, "uploaded_item_id": req.UploadedItemID, "uploaded_at": req.UploadedAt}
 	pipe := s.rdb.TxPipeline()
 	pipe.HSet(ctx, uploadRequestKey(req.ID), m)
 	pipe.Expire(ctx, uploadRequestKey(req.ID), ttl)
@@ -529,6 +547,10 @@ func (s *Store) GetUploadRequest(ctx context.Context, id string) (UploadRequest,
 	return uploadRequestFromMap(m, err)
 }
 func (s *Store) ListAvailableUploadRequests(ctx context.Context) ([]UploadRequest, error) {
+	return s.ListAvailableUploadRequestsInWorkspace(ctx, "")
+}
+
+func (s *Store) ListAvailableUploadRequestsInWorkspace(ctx context.Context, workspace string) ([]UploadRequest, error) {
 	keys, err := s.scanKeys(ctx, "el:upload_request:*")
 	if err != nil {
 		return nil, err
@@ -537,7 +559,7 @@ func (s *Store) ListAvailableUploadRequests(ctx context.Context) ([]UploadReques
 	out := []UploadRequest{}
 	for _, k := range keys {
 		req, err := uploadRequestFromMap(s.rdb.HGetAll(ctx, k).Result())
-		if err == nil && req.Status == "available" && req.ExpiresAt > now {
+		if err == nil && req.Status == "available" && req.ExpiresAt > now && (workspace == "" || req.WorkspaceID == workspace) {
 			out = append(out, req)
 		}
 	}
@@ -596,7 +618,7 @@ func (s *Store) AddAuditEvent(ctx context.Context, event AuditEvent) error {
 	if event.ID == "" {
 		event.ID = fmt.Sprintf("%d", time.Now().UnixNano())
 	}
-	m := map[string]any{"id": event.ID, "created_at": event.CreatedAt, "actor": event.Actor, "ip": event.IP, "event": event.Event, "target": event.Target, "result": event.Result, "details": event.Details}
+	m := map[string]any{"id": event.ID, "workspace_id": workspaceID(event.WorkspaceID), "created_at": event.CreatedAt, "actor": event.Actor, "ip": event.IP, "event": event.Event, "target": event.Target, "result": event.Result, "details": event.Details}
 	pipe := s.rdb.TxPipeline()
 	pipe.HSet(ctx, auditKey(event.ID), m)
 	pipe.ZAdd(ctx, auditIndexKey, redis.Z{Score: float64(event.CreatedAt), Member: event.ID})
@@ -607,6 +629,10 @@ func (s *Store) AddAuditEvent(ctx context.Context, event AuditEvent) error {
 }
 
 func (s *Store) ListAuditEvents(ctx context.Context, limit int64) ([]AuditEvent, error) {
+	return s.ListAuditEventsInWorkspace(ctx, limit, "")
+}
+
+func (s *Store) ListAuditEventsInWorkspace(ctx context.Context, limit int64, workspace string) ([]AuditEvent, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 200
 	}
@@ -618,20 +644,24 @@ func (s *Store) ListAuditEvents(ctx context.Context, limit int64) ([]AuditEvent,
 	for _, id := range ids {
 		m, err := s.rdb.HGetAll(ctx, auditKey(id)).Result()
 		if err == nil && len(m) > 0 {
-			out = append(out, auditEventFromMap(m))
+			event := auditEventFromMap(m)
+			if workspace != "" && event.WorkspaceID != workspace {
+				continue
+			}
+			out = append(out, event)
 		}
 	}
 	return out, nil
 }
 
 func userMap(user User) map[string]any {
-	return map[string]any{"username": user.Username, "password_hash": user.PasswordHash, "role": user.Role, "first_name": user.FirstName, "last_name": user.LastName, "email": user.Email, "auth_provider": user.AuthProvider, "external_id": user.ExternalID, "created_at": user.CreatedAt}
+	return map[string]any{"workspace_id": workspaceID(user.WorkspaceID), "username": user.Username, "password_hash": user.PasswordHash, "role": user.Role, "first_name": user.FirstName, "last_name": user.LastName, "email": user.Email, "auth_provider": user.AuthProvider, "external_id": user.ExternalID, "created_at": user.CreatedAt}
 }
 func userFromMap(m map[string]string) User {
-	return User{Username: m["username"], PasswordHash: m["password_hash"], Role: m["role"], FirstName: m["first_name"], LastName: m["last_name"], Email: m["email"], AuthProvider: m["auth_provider"], ExternalID: m["external_id"], CreatedAt: i64(m["created_at"])}
+	return User{WorkspaceID: workspaceID(m["workspace_id"]), Username: m["username"], PasswordHash: m["password_hash"], Role: m["role"], FirstName: m["first_name"], LastName: m["last_name"], Email: m["email"], AuthProvider: m["auth_provider"], ExternalID: m["external_id"], CreatedAt: i64(m["created_at"])}
 }
 func auditEventFromMap(m map[string]string) AuditEvent {
-	return AuditEvent{ID: m["id"], CreatedAt: i64(m["created_at"]), Actor: m["actor"], IP: m["ip"], Event: m["event"], Target: m["target"], Result: m["result"], Details: m["details"]}
+	return AuditEvent{WorkspaceID: workspaceID(m["workspace_id"]), ID: m["id"], CreatedAt: i64(m["created_at"]), Actor: m["actor"], IP: m["ip"], Event: m["event"], Target: m["target"], Result: m["result"], Details: m["details"]}
 }
 func uploadRequestFromMap(m map[string]string, err error) (UploadRequest, error) {
 	if err != nil {
@@ -640,5 +670,5 @@ func uploadRequestFromMap(m map[string]string, err error) (UploadRequest, error)
 	if len(m) == 0 {
 		return UploadRequest{}, ErrGone
 	}
-	return UploadRequest{ID: m["id"], Status: m["status"], CreatedAt: i64(m["created_at"]), ExpiresAt: i64(m["expires_at"]), RequestedBy: m["requested_by"], RequesterEmail: m["requester_email"], RecipientEmail: m["recipient_email"], Message: m["message"], UploadedItemID: m["uploaded_item_id"], UploadedAt: i64(m["uploaded_at"])}, nil
+	return UploadRequest{WorkspaceID: workspaceID(m["workspace_id"]), ID: m["id"], Status: m["status"], CreatedAt: i64(m["created_at"]), ExpiresAt: i64(m["expires_at"]), RequestedBy: m["requested_by"], RequesterEmail: m["requester_email"], RecipientEmail: m["recipient_email"], Message: m["message"], UploadedItemID: m["uploaded_item_id"], UploadedAt: i64(m["uploaded_at"])}, nil
 }

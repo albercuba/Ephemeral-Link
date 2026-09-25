@@ -10,7 +10,7 @@ import (
 	"ephemeral-link/internal/storage"
 )
 
-func Start(ctx context.Context, log *slog.Logger, st *storage.Local, store *redisstore.Store, maxTTL time.Duration) {
+func Start(ctx context.Context, log *slog.Logger, st storage.Backend, store *redisstore.Store, maxTTL time.Duration) {
 	go func() {
 		ticker := time.NewTicker(30 * time.Minute)
 		defer ticker.Stop()

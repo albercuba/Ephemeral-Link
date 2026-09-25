@@ -243,10 +243,10 @@ Manual security checks:
 
 These are larger feature goals after the hardening roadmap:
 
-- [ ] S3-compatible encrypted file storage backend.
+- [x] S3-compatible encrypted file storage backend.
 - [x] Scoped, revocable REST API keys.
 - [ ] User/workspace isolation.
 - [x] Custom domains.
 - [x] Expanded administrative reporting.
 
-API-key reporting currently exposes metadata-only audit events through `/api/v1/audit`; workspace isolation and S3 storage remain intentionally deferred because they require deployment and tenancy design decisions. Custom-domain support uses an exact `CUSTOM_DOMAINS` allowlist with `APP_BASE_URL` fallback.
+API-key reporting currently exposes metadata-only audit events through `/api/v1/audit`. S3 storage now supports streaming uploads/downloads and orphan cleanup; active local objects require a documented migration window before switching backends. Workspace isolation now carries workspace metadata, scopes admin listings, and scopes API-key audit access, but full multi-workspace administration remains to be completed. Custom-domain support uses an exact `CUSTOM_DOMAINS` allowlist with `APP_BASE_URL` fallback.

@@ -37,7 +37,7 @@ import (
 type App struct {
 	cfg            config.Config
 	store          *redisstore.Store
-	files          *storage.Local
+	files          storage.Backend
 	i18n           *i18n.Bundle
 	log            *slog.Logger
 	templates      *template.Template
@@ -108,7 +108,7 @@ type AdminAnalytics struct {
 	StorageBytesActive    int64
 }
 
-func New(cfg config.Config, store *redisstore.Store, files *storage.Local, bundle *i18n.Bundle, log *slog.Logger) (*App, error) {
+func New(cfg config.Config, store *redisstore.Store, files storage.Backend, bundle *i18n.Bundle, log *slog.Logger) (*App, error) {
 	t := template.New("").Funcs(template.FuncMap{
 		"humanSize":   humanSize,
 		"formatBytes": humanSize,
@@ -389,7 +389,7 @@ func (a *App) createUploadRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	now := time.Now()
 	ttl := a.ttl(r)
-	req := redisstore.UploadRequest{ID: id, Status: "available", CreatedAt: now.Unix(), ExpiresAt: now.Add(ttl).Unix(), RequestedBy: user.Username, RequesterEmail: requesterEmail, RecipientEmail: recipient, Message: strings.TrimSpace(r.FormValue("message"))}
+	req := redisstore.UploadRequest{WorkspaceID: user.WorkspaceID, ID: id, Status: "available", CreatedAt: now.Unix(), ExpiresAt: now.Add(ttl).Unix(), RequestedBy: user.Username, RequesterEmail: requesterEmail, RecipientEmail: recipient, Message: strings.TrimSpace(r.FormValue("message"))}
 	if err := a.store.CreateUploadRequest(r.Context(), req, ttl); err != nil {
 		a.bad(w, r, err)
 		return
@@ -708,10 +708,12 @@ func (a *App) newBaseItem(r *http.Request, typ string) (redisstore.Item, error) 
 		return redisstore.Item{}, err
 	}
 	createdBy := "anonymous"
+	workspace := a.cfg.DefaultWorkspaceID
 	if user, ok := currentUser(r); ok {
 		createdBy = user.Username
+		workspace = user.WorkspaceID
 	}
-	return redisstore.Item{ID: id, Type: typ, Status: "available", CreatedAt: now.Unix(), ExpiresAt: now.Add(ttl).Unix(), CreatedBy: createdBy, Direction: "send", HasPassphrase: ph != "", PassphraseHash: ph}, nil
+	return redisstore.Item{WorkspaceID: workspace, ID: id, Type: typ, Status: "available", CreatedAt: now.Unix(), ExpiresAt: now.Add(ttl).Unix(), CreatedBy: createdBy, Direction: "send", HasPassphrase: ph != "", PassphraseHash: ph}, nil
 }
 func (a *App) ttl(r *http.Request) time.Duration {
 	raw := r.FormValue("ttl")
@@ -1067,6 +1069,13 @@ func (a *App) decryptIntegrationSecret(value string) (string, error) {
 	return string(plain), nil
 }
 
+func (a *App) workspaceForRequest(r *http.Request) string {
+	if user, ok := currentUser(r); ok && user.WorkspaceID != "" {
+		return user.WorkspaceID
+	}
+	return a.cfg.DefaultWorkspaceID
+}
+
 func (a *App) audit(r *http.Request, event, target, result, details string) {
 	actor := "anonymous"
 	if user, ok := currentUser(r); ok && user.Username != "" {
@@ -1082,7 +1091,7 @@ func (a *App) auditAs(r *http.Request, actor, event, target, result, details str
 	if len(details) > 240 {
 		details = details[:240]
 	}
-	if err := a.store.AddAuditEvent(r.Context(), redisstore.AuditEvent{Actor: actor, IP: r.RemoteAddr, Event: event, Target: target, Result: result, Details: details}); err != nil {
+	if err := a.store.AddAuditEvent(r.Context(), redisstore.AuditEvent{WorkspaceID: a.workspaceForRequest(r), Actor: actor, IP: r.RemoteAddr, Event: event, Target: target, Result: result, Details: details}); err != nil {
 		a.log.Warn("audit event write failed", "error", err, "event", event)
 	}
 }

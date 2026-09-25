@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -30,7 +31,14 @@ func main() {
 		os.Exit(1)
 	}
 	defer store.Close()
-	files, err := storage.NewLocal(cfg.StoragePath)
+	var files storage.Backend
+	if cfg.StorageBackend == "s3" {
+		files, err = storage.NewS3(cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3SessionToken, cfg.S3Bucket, cfg.S3Prefix, cfg.S3Secure)
+	} else if cfg.StorageBackend == "local" {
+		files, err = storage.NewLocal(cfg.StoragePath)
+	} else {
+		err = fmt.Errorf("unsupported STORAGE_BACKEND %q", cfg.StorageBackend)
+	}
 	if err != nil {
 		log.Error("storage init failed", "error", err)
 		os.Exit(1)

@@ -22,6 +22,22 @@ func newTestStore(t *testing.T) (*Store, *miniredis.Miniredis) {
 	return store, server
 }
 
+func TestLegacyRecordsNormalizeToDefaultWorkspace(t *testing.T) {
+	store, _ := newTestStore(t)
+	ctx := context.Background()
+	item := Item{ID: "workspace-default", Type: "text", CreatedAt: time.Now().Unix(), ExpiresAt: time.Now().Add(time.Hour).Unix()}
+	if err := store.Create(ctx, item, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := store.Get(ctx, item.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.WorkspaceID != DefaultWorkspaceID {
+		t.Fatalf("workspace = %q, want %q", loaded.WorkspaceID, DefaultWorkspaceID)
+	}
+}
+
 func TestClaimIsAtomicAndWipesPayloadFields(t *testing.T) {
 	store, _ := newTestStore(t)
 	ctx := context.Background()

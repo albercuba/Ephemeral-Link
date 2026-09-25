@@ -138,7 +138,13 @@ go test ./...
 | --- | --- |
 | `APP_BASE_URL` | Public URL used when generating single-use links. |
 | `REDIS_URL` | Redis/Valkey connection URL. |
-| `STORAGE_PATH` | Directory for encrypted file payloads. Must not be public web root. |
+| `STORAGE_PATH` | Directory for encrypted file payloads when `STORAGE_BACKEND=local`. Must not be public web root. |
+| `STORAGE_BACKEND` | `local` (default) or `s3`. |
+| `S3_ENDPOINT` | S3-compatible endpoint hostname, without scheme. |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Server-side S3 credentials; never expose them to clients. |
+| `S3_SESSION_TOKEN` | Optional S3 session token. |
+| `S3_BUCKET` / `S3_PREFIX` | S3 bucket and object prefix used for encrypted payloads. |
+| `S3_SECURE` | Use TLS for S3 connections; default `true`. |
 | `MAX_TEXT_SECRET_SIZE` | Maximum text secret size in bytes. |
 | `MAX_FILE_SIZE` | Maximum file upload size in bytes. |
 | `DEFAULT_TTL_SECONDS` | Default expiry for new items. |
@@ -147,6 +153,7 @@ go test ./...
 - `RATE_LIMIT_PER_MINUTE` | Per-IP request limit. |
 | `TRUSTED_PROXIES` | Optional comma-separated trusted reverse proxy IPs/CIDRs. `X-Forwarded-For` and `X-Real-IP` are ignored unless the direct peer is trusted. |
 | `CUSTOM_DOMAINS` | Optional comma-separated hostnames allowed to replace `APP_BASE_URL` when generating links. Hosts are matched exactly; unallowlisted `Host` headers use `APP_BASE_URL`. |
+| `DEFAULT_WORKSPACE_ID` | Workspace assigned to legacy records and new records without an explicit workspace; defaults to `default`. |
 | `ALLOWED_LANGUAGES` | Comma-separated language list, default `en,de`. |
 | `DEFAULT_LANGUAGE` | Default UI language, default `en`. |
 | `SECURE_COOKIES` | Set `true` behind HTTPS in production. |
