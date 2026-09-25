@@ -109,10 +109,10 @@ Status: implemented with short-lived server-side created-link receipts and an op
 
 - [x] Add `Cache-Control: no-store` for sensitive pages/responses.
 - [x] Add HSTS when serving behind HTTPS / secure cookies.
-- [ ] Verify headers on reveal, download, login, setup, and admin pages.
+- [x] Verify headers on reveal, download, login, setup, and admin pages.
 - [ ] Add security header tests.
 
-Status: implemented in `internal/web/server.go`; tests still needed.
+Status: implemented in `internal/web/server.go`; generic and route-matrix coverage is in `internal/web/security_test.go`.
 
 ### 2.6 Self-host fonts, icons and MSAL; tighten the CSP
 
@@ -177,7 +177,7 @@ Status: implemented chunked AES-256-GCM streaming for new direct file links in `
 - [x] Keep user-facing email copy localized.
 - [x] Avoid leaking sensitive operational details in user-facing errors.
 
-Status: in progress; login and Microsoft sign-in errors now use localized messages, and token validation failures no longer expose verifier details to users. A full template/string audit is still needed.
+Status: in progress; login and Microsoft sign-in errors now use localized messages, admin role/status/filter labels now use both locale bundles, and locale key consistency is tested. A full template/string audit is still needed.
 
 ### 3.4 Code hygiene
 

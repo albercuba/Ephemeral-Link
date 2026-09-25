@@ -89,6 +89,26 @@ func TestSecurityHeadersForSensitivePages(t *testing.T) {
 	}
 }
 
+func TestSecurityHeadersNoStoreSensitiveRouteMatrix(t *testing.T) {
+	app := &App{cfg: config.Config{SecureCookies: true}}
+	handler := app.securityHeaders(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	for _, path := range []string{"/s/demo", "/s/demo/reveal", "/f/demo", "/f/demo/download", "/login", "/setup", "/admin", "/created"} {
+		t.Run(path, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, path, nil)
+			handler.ServeHTTP(recorder, request)
+			if got := recorder.Header().Get("Cache-Control"); got != "no-store, max-age=0" {
+				t.Fatalf("Cache-Control = %q", got)
+			}
+			if got := recorder.Header().Get("Strict-Transport-Security"); !strings.Contains(got, "max-age=31536000") {
+				t.Fatalf("Strict-Transport-Security = %q", got)
+			}
+		})
+	}
+}
+
 func TestSecurityHeadersAllowStaticCaching(t *testing.T) {
 	app := &App{}
 	handler := app.securityHeaders(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
