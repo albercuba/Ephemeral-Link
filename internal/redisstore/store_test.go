@@ -169,6 +169,62 @@ func TestAPIKeyIsOneTimePresentedScopedRevocableAndExpiring(t *testing.T) {
 	}
 }
 
+func TestWorkspaceScopedAPIKeyAdministration(t *testing.T) {
+	store, _ := newTestStore(t)
+	ctx := context.Background()
+	teamA, _, err := store.CreateAPIKeyInWorkspace(ctx, "team-a", "a", []string{"reports:read"}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	teamB, _, err := store.CreateAPIKeyInWorkspace(ctx, "team-b", "b", []string{"reports:read"}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys, err := store.ListAPIKeysInWorkspace(ctx, "team-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(keys) != 1 || keys[0].ID != teamA.ID {
+		t.Fatalf("team-a keys = %#v", keys)
+	}
+	if err := store.RevokeAPIKeyInWorkspace(ctx, teamB.ID, "team-a"); !errors.Is(err, ErrInvalidAPIKey) {
+		t.Fatalf("cross-workspace revoke error = %v", err)
+	}
+	if key, err := store.ListAPIKeysInWorkspace(ctx, "team-b"); err != nil || len(key) != 1 || key[0].RevokedAt != 0 {
+		t.Fatalf("team-b key changed after denied revoke: keys=%#v err=%v", key, err)
+	}
+}
+
+func TestWorkspaceMembershipScopedUserAdministration(t *testing.T) {
+	store, _ := newTestStore(t)
+	ctx := context.Background()
+	user := User{Username: "shared", WorkspaceID: "team-a", Role: "user", PasswordHash: "hash", CreatedAt: 1}
+	if err := store.SaveUser(ctx, user); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.AddWorkspaceMembership(ctx, user.Username, "team-a", "user"); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.AddWorkspaceMembership(ctx, user.Username, "team-b", "administrator"); err != nil {
+		t.Fatal(err)
+	}
+	users, err := store.ListUsersInWorkspace(ctx, "team-b")
+	if err != nil || len(users) != 1 || users[0].Username != user.Username {
+		t.Fatalf("team-b users = %#v err=%v", users, err)
+	}
+	if err := store.RemoveWorkspaceMembership(ctx, user.Username, "team-a"); err != nil {
+		t.Fatal(err)
+	}
+	member, err := store.HasWorkspaceMembership(ctx, user.Username, "team-a")
+	if err != nil || member {
+		t.Fatalf("team-a membership remains: member=%v err=%v", member, err)
+	}
+	member, err = store.HasWorkspaceMembership(ctx, user.Username, "team-b")
+	if err != nil || !member {
+		t.Fatalf("team-b membership missing: member=%v err=%v", member, err)
+	}
+}
+
 func TestFailureThrottleBlocksAtLimitAndResets(t *testing.T) {
 	store, server := newTestStore(t)
 	ctx := context.Background()

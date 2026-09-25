@@ -451,11 +451,14 @@ func (a *App) authenticatedUser(r *http.Request) (*redisstore.User, bool) {
 		return nil, false
 	}
 	if workspace, workspaceErr := a.store.GetSessionWorkspace(r.Context(), c.Value); workspaceErr == nil {
-		if member, membershipErr := a.store.HasWorkspaceMembership(r.Context(), username, workspace); membershipErr == nil && member {
-			user.WorkspaceID = workspace
+		if membership, membershipErr := a.store.GetWorkspaceMembership(r.Context(), username, workspace); membershipErr == nil {
+			user.WorkspaceID = membership.WorkspaceID
+			user.Role = membership.Role
 		}
 	}
-	if member, membershipErr := a.store.HasWorkspaceMembership(r.Context(), username, user.WorkspaceID); membershipErr == nil && !member {
+	if membership, membershipErr := a.store.GetWorkspaceMembership(r.Context(), username, user.WorkspaceID); membershipErr == nil {
+		user.Role = membership.Role
+	} else if errors.Is(membershipErr, redisstore.ErrGone) {
 		_ = a.store.AddWorkspaceMembership(r.Context(), username, user.WorkspaceID, user.Role)
 	}
 	return &user, true
@@ -563,10 +566,9 @@ func (a *App) acceptWorkspaceInvitation(w http.ResponseWriter, r *http.Request) 
 		a.bad(w, r, err)
 		return
 	}
-	user.WorkspaceID = invitation.WorkspaceID
-	user.Role = invitation.Role
-	if err := a.store.SaveUser(r.Context(), *user); err != nil {
-		a.bad(w, r, err)
+	cookie, cookieErr := r.Cookie(sessionCookieName)
+	if cookieErr != nil || cookie.Value == "" || a.store.SetSessionWorkspace(r.Context(), cookie.Value, invitation.WorkspaceID) != nil {
+		a.bad(w, r, errors.New("session workspace update failed"))
 		return
 	}
 	a.auditAs(r, user.Username, "accept_workspace_invitation", invitation.ID, "success", "workspace="+invitation.WorkspaceID)
@@ -577,7 +579,7 @@ func (a *App) adminAPIKeys(w http.ResponseWriter, r *http.Request) {
 	if _, ok := a.requireAdmin(w, r); !ok {
 		return
 	}
-	keys, err := a.store.ListAPIKeys(r.Context())
+	keys, err := a.store.ListAPIKeysInWorkspace(r.Context(), a.workspaceForRequest(r))
 	if err != nil {
 		a.bad(w, r, err)
 		return
@@ -627,7 +629,11 @@ func (a *App) adminRevokeAPIKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := chi.URLParam(r, "id")
-	if err := a.store.RevokeAPIKey(r.Context(), id); err != nil {
+	if err := a.store.RevokeAPIKeyInWorkspace(r.Context(), id, a.workspaceForRequest(r)); err != nil {
+		if errors.Is(err, redisstore.ErrInvalidAPIKey) {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
 		a.bad(w, r, err)
 		return
 	}
@@ -695,7 +701,7 @@ func (a *App) admin(w http.ResponseWriter, r *http.Request) {
 		a.bad(w, r, err)
 		return
 	}
-	users, err := a.store.ListUsers(r.Context())
+	users, err := a.store.ListUsersInWorkspace(r.Context(), workspace)
 	if err != nil {
 		a.bad(w, r, err)
 		return
@@ -966,9 +972,17 @@ func (a *App) adminSaveUser(w http.ResponseWriter, r *http.Request) {
 	email := strings.TrimSpace(r.FormValue("email"))
 	password := r.FormValue("password")
 	existing, _ := a.store.GetUser(r.Context(), username)
-	if existing.CreatedAt != 0 && existing.WorkspaceID != a.workspaceForRequest(r) {
-		http.Error(w, "not found", http.StatusNotFound)
-		return
+	workspace := a.workspaceForRequest(r)
+	if existing.CreatedAt != 0 {
+		member, membershipErr := a.store.HasWorkspaceMembership(r.Context(), username, workspace)
+		if membershipErr != nil {
+			a.bad(w, r, membershipErr)
+			return
+		}
+		if !member {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
 	}
 	if existing.CreatedAt != 0 && existing.PasswordHash == "" {
 		http.Redirect(w, r, "/admin#manage-users", 303)
@@ -991,7 +1005,11 @@ func (a *App) adminSaveUser(w http.ResponseWriter, r *http.Request) {
 	if createdAt == 0 {
 		createdAt = time.Now().Unix()
 	}
-	if err := a.store.SaveUser(r.Context(), redisstore.User{WorkspaceID: a.workspaceForRequest(r), Username: username, PasswordHash: hash, Role: role, FirstName: firstName, LastName: lastName, Email: email, CreatedAt: createdAt}); err != nil {
+	if err := a.store.SaveUser(r.Context(), redisstore.User{WorkspaceID: workspace, Username: username, PasswordHash: hash, Role: role, FirstName: firstName, LastName: lastName, Email: email, CreatedAt: createdAt}); err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	if err := a.store.AddWorkspaceMembership(r.Context(), username, workspace, role); err != nil {
 		a.bad(w, r, err)
 		return
 	}
@@ -1014,15 +1032,30 @@ func (a *App) adminDeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user, _ := a.store.GetUser(r.Context(), username)
-	if user.WorkspaceID != a.workspaceForRequest(r) || user.PasswordHash == "" {
+	workspace := a.workspaceForRequest(r)
+	member, membershipErr := a.store.HasWorkspaceMembership(r.Context(), username, workspace)
+	if membershipErr != nil || !member || user.PasswordHash == "" {
 		http.Redirect(w, r, "/admin#manage-users", 303)
 		return
 	}
-	if err := a.store.DeleteUser(r.Context(), username); err != nil {
+	if err := a.store.RemoveWorkspaceMembership(r.Context(), username, workspace); err != nil {
 		a.bad(w, r, err)
 		return
 	}
-	a.audit(r, "admin_delete_user", username, "success", "")
+	// User records are global identities. Remove the record only when no
+	// workspace membership remains; otherwise preserve access elsewhere.
+	memberships, err := a.store.ListWorkspaceMemberships(r.Context(), username)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	if len(memberships) == 0 {
+		if err := a.store.DeleteUser(r.Context(), username); err != nil {
+			a.bad(w, r, err)
+			return
+		}
+	}
+	a.audit(r, "admin_delete_user", username, "success", "workspace="+workspace)
 	http.Redirect(w, r, "/admin#manage-users", 303)
 }
 

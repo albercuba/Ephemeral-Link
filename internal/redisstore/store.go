@@ -308,6 +308,37 @@ func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
 	}
 	return out, nil
 }
+
+func (s *Store) ListUsersInWorkspace(ctx context.Context, workspace string) ([]User, error) {
+	if workspace == "" {
+		return s.ListUsers(ctx)
+	}
+	membershipKeys, err := s.scanKeys(ctx, "el:membership:*:"+workspaceID(workspace))
+	if err != nil {
+		return nil, err
+	}
+	out := make([]User, 0, len(membershipKeys))
+	seen := make(map[string]struct{}, len(membershipKeys))
+	for _, membershipKey := range membershipKeys {
+		membership, err := s.rdb.HGetAll(ctx, membershipKey).Result()
+		if err != nil || len(membership) == 0 {
+			continue
+		}
+		username := membership["username"]
+		if username == "" {
+			continue
+		}
+		if _, ok := seen[username]; ok {
+			continue
+		}
+		m, err := s.rdb.HGetAll(ctx, userKey(username)).Result()
+		if err == nil && len(m) > 0 {
+			out = append(out, userFromMap(m))
+			seen[username] = struct{}{}
+		}
+	}
+	return out, nil
+}
 func (s *Store) HasAdmin(ctx context.Context) (bool, error) {
 	users, err := s.ListUsers(ctx)
 	if err != nil {
@@ -358,8 +389,26 @@ func (s *Store) AddWorkspaceMembership(ctx context.Context, username, workspace,
 }
 
 func (s *Store) HasWorkspaceMembership(ctx context.Context, username, workspace string) (bool, error) {
-	count, err := s.rdb.Exists(ctx, membershipKey(username, workspaceID(workspace))).Result()
-	return count > 0, err
+	_, err := s.GetWorkspaceMembership(ctx, username, workspace)
+	if errors.Is(err, ErrGone) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+func (s *Store) GetWorkspaceMembership(ctx context.Context, username, workspace string) (WorkspaceMembership, error) {
+	m, err := s.rdb.HGetAll(ctx, membershipKey(username, workspaceID(workspace))).Result()
+	if err != nil {
+		return WorkspaceMembership{}, err
+	}
+	if len(m) == 0 {
+		return WorkspaceMembership{}, ErrGone
+	}
+	return WorkspaceMembership{Username: m["username"], WorkspaceID: workspaceID(m["workspace_id"]), Role: m["role"]}, nil
+}
+
+func (s *Store) RemoveWorkspaceMembership(ctx context.Context, username, workspace string) error {
+	return s.rdb.Del(ctx, membershipKey(username, workspaceID(workspace))).Err()
 }
 
 func (s *Store) ListWorkspaceMemberships(ctx context.Context, username string) ([]WorkspaceMembership, error) {
@@ -481,6 +530,10 @@ func (s *Store) AuthenticateAPIKey(ctx context.Context, value, scope string) (AP
 }
 
 func (s *Store) ListAPIKeys(ctx context.Context) ([]APIKey, error) {
+	return s.ListAPIKeysInWorkspace(ctx, "")
+}
+
+func (s *Store) ListAPIKeysInWorkspace(ctx context.Context, workspace string) ([]APIKey, error) {
 	keys, err := s.scanKeys(ctx, "el:api_key:*")
 	if err != nil {
 		return nil, err
@@ -489,14 +542,28 @@ func (s *Store) ListAPIKeys(ctx context.Context) ([]APIKey, error) {
 	for _, key := range keys {
 		m, err := s.rdb.HGetAll(ctx, key).Result()
 		if err == nil && len(m) > 0 {
-			out = append(out, apiKeyFromMap(key, m))
+			apiKey := apiKeyFromMap(key, m)
+			if workspace == "" || apiKey.WorkspaceID == workspace {
+				out = append(out, apiKey)
+			}
 		}
 	}
 	return out, nil
 }
 
 func (s *Store) RevokeAPIKey(ctx context.Context, id string) error {
+	return s.RevokeAPIKeyInWorkspace(ctx, id, "")
+}
+
+func (s *Store) RevokeAPIKeyInWorkspace(ctx context.Context, id, workspace string) error {
 	if id == "" {
+		return ErrInvalidAPIKey
+	}
+	m, err := s.rdb.HGetAll(ctx, apiKeyKey(id)).Result()
+	if err != nil {
+		return err
+	}
+	if len(m) == 0 || (workspace != "" && workspaceID(m["workspace_id"]) != workspaceID(workspace)) {
 		return ErrInvalidAPIKey
 	}
 	return s.rdb.HSet(ctx, apiKeyKey(id), "revoked_at", time.Now().Unix()).Err()

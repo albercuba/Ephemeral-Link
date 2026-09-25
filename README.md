@@ -213,6 +213,6 @@ Every visible UI string should come from the translation files.
 
 Uploaded files are encrypted before being written under `STORAGE_PATH`. The original filesystem path is never exposed. Recipients receive a sanitized filename through `Content-Disposition`. A background cleanup goroutine deletes old orphaned files based on `MAX_TTL_SECONDS`.
 
-## Future extension points
+## Implemented platform foundations
 
-The code is structured for later additions such as custom domains, S3-compatible storage, REST API keys, multi-team workspace isolation, and expanded administrative reporting.
+The code includes custom-domain allowlisting, S3-compatible encrypted storage with a non-destructive migration command, scoped/revocable REST API keys, multi-workspace membership with session switching and workspace-scoped administration, and metadata-only administrative reporting. See the production guides and [docs/roadmap.md](docs/roadmap.md) for operational steps and remaining maintenance work.

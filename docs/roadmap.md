@@ -4,13 +4,13 @@ This roadmap tracks the security and reliability hardening work needed before tr
 
 ## 0. Ground rules
 
-- [ ] Keep single-use claims atomic.
-- [ ] Verify passphrases before claiming an item.
-- [ ] Never log plaintext secrets, files, passphrases, generated links, raw encryption keys, SMTP credentials, Graph client secrets, or Microsoft tokens.
-- [ ] Keep audit logs metadata-only.
-- [ ] Keep files outside the public web root.
-- [ ] Preserve AES-256-GCM encryption with per-item data keys wrapped by `ENCRYPTION_MASTER_KEY` unless replacing it with an equally strong reviewed design.
-- [ ] Keep CSRF protection, request limits, secure headers, Redis TTL expiry, and cleanup behavior enabled.
+- [x] Keep single-use claims atomic.
+- [x] Verify passphrases before claiming an item.
+- [x] Never log plaintext secrets, files, passphrases, generated links, raw encryption keys, SMTP credentials, Graph client secrets, or Microsoft tokens.
+- [x] Keep audit logs metadata-only.
+- [x] Keep files outside the public web root.
+- [x] Preserve AES-256-GCM encryption with per-item data keys wrapped by `ENCRYPTION_MASTER_KEY` unless replacing it with an equally strong reviewed design.
+- [x] Keep CSRF protection, request limits, secure headers, Redis TTL expiry, and cleanup behavior enabled.
 
 ## Phase 1 — High priority security
 
@@ -193,9 +193,9 @@ Status: complete for server-rendered templates; visible labels, admin status val
 
 - [ ] Split large handlers where it improves readability.
 - [ ] Remove dead code and unused assets.
-- [ ] Keep security-sensitive helpers small and tested.
+- [x] Keep security-sensitive helpers small and tested.
 
-Status: not started.
+Status: partially complete; security-sensitive helpers are covered and workspace authorization boundaries are tested. Splitting the remaining large handlers and removing dead assets is still maintenance work.
 
 ### 3.5 Documentation cleanup
 
@@ -215,7 +215,7 @@ Status: complete; README, production configuration, Compose settings, migration 
 - [x] Add security header tests.
 - [x] Add request-size/CSRF tests.
 
-Status: in progress; focused tests cover config validation, Redis claim/setup semantics, audit CSV escaping, security headers, integration secret helpers, CSRF validation, route-aware body limits, receipts, and single-use streaming downloads.
+Status: in progress; focused tests cover config validation, Redis claim/setup semantics, workspace-scoped administration and cross-workspace denial, audit CSV escaping, security headers, integration secret helpers, CSRF validation, route-aware body limits, receipts, and single-use streaming downloads.
 
 ## Final verification checklist
 
@@ -249,4 +249,4 @@ These are larger feature goals after the hardening roadmap:
 - [x] Custom domains.
 - [x] Expanded administrative reporting.
 
-API-key reporting currently exposes metadata-only audit events through `/api/v1/audit`. S3 storage now supports streaming uploads/downloads and orphan cleanup; active local objects can be migrated with `cmd/migrate-storage` without deleting the source. Workspace isolation includes workspace metadata migration, one-time invitations, workspace roles, per-session multi-workspace membership switching, workspace-scoped admin listings/burns/audit/API-key reporting, and `cmd/migrate-workspaces`. Anonymous opaque links remain intentionally possession-based. Custom-domain support uses an exact `CUSTOM_DOMAINS` allowlist with `APP_BASE_URL` fallback.
+API-key reporting currently exposes metadata-only audit events through `/api/v1/audit`. S3 storage now supports streaming uploads/downloads and orphan cleanup; active local objects can be migrated with `cmd/migrate-storage` without deleting the source. Workspace isolation includes workspace metadata migration, one-time invitations, workspace roles, per-session multi-workspace membership switching, workspace-scoped user/API-key administration, listings/burns/audit/API-key reporting, cross-workspace denial tests, and `cmd/migrate-workspaces`. Anonymous opaque links remain intentionally possession-based. Custom-domain support uses an exact `CUSTOM_DOMAINS` allowlist with `APP_BASE_URL` fallback.

@@ -88,6 +88,26 @@ func TestMigrateLegacyMicrosoftUserDoesNotMergeLocalAccounts(t *testing.T) {
 	}
 }
 
+func TestAdminBurnLinkDeniesCrossWorkspaceAccess(t *testing.T) {
+	app, store, _, _ := newHandlerTestApp(t)
+	ctx := context.Background()
+	item := redisstore.Item{ID: "other-workspace-item", WorkspaceID: "team-b", Type: "text", CreatedAt: time.Now().Unix(), ExpiresAt: time.Now().Add(time.Hour).Unix()}
+	if err := store.Create(ctx, item, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	request := withRouteID(httptest.NewRequest(http.MethodPost, "/admin/links/"+item.ID+"/burn", nil), item.ID)
+	request = request.WithContext(context.WithValue(request.Context(), userContextKey{}, &redisstore.User{Username: "admin", WorkspaceID: "team-a", Role: "administrator"}))
+	recorder := httptest.NewRecorder()
+	app.adminBurnLink(recorder, request)
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("cross-workspace burn status = %d, want %d", recorder.Code, http.StatusNotFound)
+	}
+	stored, err := store.Get(ctx, item.ID)
+	if err != nil || stored.Status != "available" {
+		t.Fatalf("cross-workspace burn changed item: item=%#v err=%v", stored, err)
+	}
+}
+
 func TestRedirectCreatedStoresShortLivedReceipt(t *testing.T) {
 	app, store, _, _ := newHandlerTestApp(t)
 	request := httptest.NewRequest(http.MethodPost, "/secrets/text", nil)
