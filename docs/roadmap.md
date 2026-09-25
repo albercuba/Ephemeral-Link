@@ -151,6 +151,16 @@ Status: implemented for public file links and authenticated upload-request downl
 
 Status: implemented route-aware POST body caps in `internal/web/server.go`; tests cover missing/invalid CSRF tokens, oversized form bodies, and route-specific body limits.
 
+### 2.10 Local Active Directory authentication
+
+- [x] Replace the `/auth/ad` stub with LDAP/Active Directory authentication.
+- [x] Store the directory bind password encrypted with the application master key.
+- [x] Authenticate by directory lookup followed by a user bind.
+- [x] Prefer LDAPS and document the security implications of plain LDAP.
+- [ ] Add a live LDAP integration test environment.
+
+Status: implemented in `internal/web/auth.go`, `internal/redisstore/store.go`, and the admin integration form. Live directory integration testing remains environment-dependent.
+
 ## Phase 3 — Lower priority hardening, hygiene, and tests
 
 ### 3.1 Docker / Compose hardening

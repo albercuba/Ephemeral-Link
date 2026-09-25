@@ -159,6 +159,7 @@ func (a *App) Routes() http.Handler {
 	r.Get("/auth/microsoft", a.microsoftLogin)
 	r.Get("/auth/microsoft/callback", a.microsoftCallback)
 	r.Get("/auth/ad", a.adLogin)
+	r.Post("/auth/ad", a.adPost)
 	r.Group(func(r chi.Router) {
 		r.Use(a.requireAuth)
 		r.Get("/", a.home)
@@ -989,6 +990,9 @@ func (a *App) getIntegrationConfig(ctx context.Context) (redisstore.IntegrationC
 	if cfg.GraphClientSecret, err = a.decryptIntegrationSecret(cfg.GraphClientSecret); err != nil {
 		return cfg, err
 	}
+	if cfg.ADBindPassword, err = a.decryptIntegrationSecret(cfg.ADBindPassword); err != nil {
+		return cfg, err
+	}
 	return cfg, nil
 }
 
@@ -998,6 +1002,9 @@ func (a *App) saveIntegrationConfig(ctx context.Context, cfg redisstore.Integrat
 		return err
 	}
 	if cfg.GraphClientSecret, err = a.encryptIntegrationSecret(cfg.GraphClientSecret); err != nil {
+		return err
+	}
+	if cfg.ADBindPassword, err = a.encryptIntegrationSecret(cfg.ADBindPassword); err != nil {
 		return err
 	}
 	return a.store.SaveIntegrationConfig(ctx, cfg)

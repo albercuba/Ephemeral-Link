@@ -29,7 +29,7 @@
     {{if or .MicrosoftLoginEnabled .ADLoginEnabled}}
     <section id="login-actions-panel" class="created-actions-panel auth-provider-actions">
       {{if .MicrosoftLoginEnabled}}<a id="login-microsoft-button" class="auth-provider-button" href="/auth/microsoft"><i class="fa-brands fa-microsoft" aria-hidden="true"></i> {{call .T "sign_in_microsoft"}}</a>{{end}}
-      {{if .ADLoginEnabled}}<a id="login-ad-button" class="auth-provider-button" href="/auth/ad"><i class="fa-solid fa-server" aria-hidden="true"></i> {{call .T "sign_in_local_ad"}}</a>{{end}}
+      {{if .ADLoginEnabled}}<a id="login-ad-button" class="auth-provider-button" href="/auth/ad"><i class="fa-solid fa-server" aria-hidden="true"></i> {{call .T "sign_in_local_ad"}}</a><form id="login-ad-form" class="auth-provider-form" method="post" action="/auth/ad"><input type="hidden" name="csrf" value="{{.CSRF}}"><label>{{call .T "username_label"}}<input name="username" autocomplete="username" required></label><label>{{call .T "password_label"}}<input name="password" type="password" autocomplete="current-password" required></label><button type="submit">{{call .T "sign_in_local_ad"}}</button></form>{{end}}
     </section>
     {{end}}
   </article>

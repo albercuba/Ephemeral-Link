@@ -80,10 +80,10 @@ func (s *Store) scanKeys(ctx context.Context, pattern string) ([]string, error) 
 	}
 }
 
-func key(id string) string                       { return "el:item:" + id }
-func uploadRequestKey(id string) string         { return "el:upload_request:" + id }
-func auditKey(id string) string                 { return "el:audit:" + id }
-func createdReceiptKey(token string) string     { return "el:created_receipt:" + token }
+func key(id string) string                  { return "el:item:" + id }
+func uploadRequestKey(id string) string     { return "el:upload_request:" + id }
+func auditKey(id string) string             { return "el:audit:" + id }
+func createdReceiptKey(token string) string { return "el:created_receipt:" + token }
 
 const auditIndexKey = "el:audit:index"
 
@@ -201,6 +201,7 @@ type IntegrationConfig struct {
 	ADHost              string
 	ADBaseDN            string
 	ADBindDN            string
+	ADBindPassword      string
 	SMTPEnabled         bool
 	SMTPHost            string
 	SMTPPort            string
@@ -464,14 +465,14 @@ func (s *Store) ReleaseUploadRequest(ctx context.Context, id string) error {
 	return s.rdb.HSet(ctx, uploadRequestKey(id), "status", "available").Err()
 }
 func (s *Store) SaveIntegrationConfig(ctx context.Context, cfg IntegrationConfig) error {
-	return s.rdb.HSet(ctx, "el:integration", map[string]any{"microsoft_enabled": boolString(cfg.MicrosoftEnabled), "microsoft_tenant_id": cfg.MicrosoftTenantID, "microsoft_client_id": cfg.MicrosoftClientID, "microsoft_audience": cfg.MicrosoftAudience, "microsoft_authority": cfg.MicrosoftAuthority, "entra_admin_group_name": cfg.EntraAdminGroupName, "entra_admin_group_id": cfg.EntraAdminGroupID, "entra_user_group_name": cfg.EntraUserGroupName, "entra_user_group_id": cfg.EntraUserGroupID, "ad_enabled": boolString(cfg.ADEnabled), "ad_host": cfg.ADHost, "ad_base_dn": cfg.ADBaseDN, "ad_bind_dn": cfg.ADBindDN, "smtp_enabled": boolString(cfg.SMTPEnabled), "smtp_host": cfg.SMTPHost, "smtp_port": cfg.SMTPPort, "smtp_username": cfg.SMTPUsername, "smtp_password": cfg.SMTPPassword, "smtp_from": cfg.SMTPFrom, "graph_enabled": boolString(cfg.GraphEnabled), "graph_tenant_id": cfg.GraphTenantID, "graph_client_id": cfg.GraphClientID, "graph_client_secret": cfg.GraphClientSecret, "graph_sender": cfg.GraphSender}).Err()
+	return s.rdb.HSet(ctx, "el:integration", map[string]any{"microsoft_enabled": boolString(cfg.MicrosoftEnabled), "microsoft_tenant_id": cfg.MicrosoftTenantID, "microsoft_client_id": cfg.MicrosoftClientID, "microsoft_audience": cfg.MicrosoftAudience, "microsoft_authority": cfg.MicrosoftAuthority, "entra_admin_group_name": cfg.EntraAdminGroupName, "entra_admin_group_id": cfg.EntraAdminGroupID, "entra_user_group_name": cfg.EntraUserGroupName, "entra_user_group_id": cfg.EntraUserGroupID, "ad_enabled": boolString(cfg.ADEnabled), "ad_host": cfg.ADHost, "ad_base_dn": cfg.ADBaseDN, "ad_bind_dn": cfg.ADBindDN, "ad_bind_password": cfg.ADBindPassword, "smtp_enabled": boolString(cfg.SMTPEnabled), "smtp_host": cfg.SMTPHost, "smtp_port": cfg.SMTPPort, "smtp_username": cfg.SMTPUsername, "smtp_password": cfg.SMTPPassword, "smtp_from": cfg.SMTPFrom, "graph_enabled": boolString(cfg.GraphEnabled), "graph_tenant_id": cfg.GraphTenantID, "graph_client_id": cfg.GraphClientID, "graph_client_secret": cfg.GraphClientSecret, "graph_sender": cfg.GraphSender}).Err()
 }
 func (s *Store) GetIntegrationConfig(ctx context.Context) (IntegrationConfig, error) {
 	m, err := s.rdb.HGetAll(ctx, "el:integration").Result()
 	if err != nil {
 		return IntegrationConfig{}, err
 	}
-	return IntegrationConfig{MicrosoftEnabled: m["microsoft_enabled"] == "true", MicrosoftTenantID: m["microsoft_tenant_id"], MicrosoftClientID: m["microsoft_client_id"], MicrosoftAudience: m["microsoft_audience"], MicrosoftAuthority: m["microsoft_authority"], EntraAdminGroupName: m["entra_admin_group_name"], EntraAdminGroupID: m["entra_admin_group_id"], EntraUserGroupName: m["entra_user_group_name"], EntraUserGroupID: m["entra_user_group_id"], ADEnabled: m["ad_enabled"] == "true", ADHost: m["ad_host"], ADBaseDN: m["ad_base_dn"], ADBindDN: m["ad_bind_dn"], SMTPEnabled: m["smtp_enabled"] == "true", SMTPHost: m["smtp_host"], SMTPPort: m["smtp_port"], SMTPUsername: m["smtp_username"], SMTPPassword: m["smtp_password"], SMTPFrom: m["smtp_from"], GraphEnabled: m["graph_enabled"] == "true", GraphTenantID: m["graph_tenant_id"], GraphClientID: m["graph_client_id"], GraphClientSecret: m["graph_client_secret"], GraphSender: m["graph_sender"]}, nil
+	return IntegrationConfig{MicrosoftEnabled: m["microsoft_enabled"] == "true", MicrosoftTenantID: m["microsoft_tenant_id"], MicrosoftClientID: m["microsoft_client_id"], MicrosoftAudience: m["microsoft_audience"], MicrosoftAuthority: m["microsoft_authority"], EntraAdminGroupName: m["entra_admin_group_name"], EntraAdminGroupID: m["entra_admin_group_id"], EntraUserGroupName: m["entra_user_group_name"], EntraUserGroupID: m["entra_user_group_id"], ADEnabled: m["ad_enabled"] == "true", ADHost: m["ad_host"], ADBaseDN: m["ad_base_dn"], ADBindDN: m["ad_bind_dn"], ADBindPassword: m["ad_bind_password"], SMTPEnabled: m["smtp_enabled"] == "true", SMTPHost: m["smtp_host"], SMTPPort: m["smtp_port"], SMTPUsername: m["smtp_username"], SMTPPassword: m["smtp_password"], SMTPFrom: m["smtp_from"], GraphEnabled: m["graph_enabled"] == "true", GraphTenantID: m["graph_tenant_id"], GraphClientID: m["graph_client_id"], GraphClientSecret: m["graph_client_secret"], GraphSender: m["graph_sender"]}, nil
 }
 
 func (s *Store) AddAuditEvent(ctx context.Context, event AuditEvent) error {

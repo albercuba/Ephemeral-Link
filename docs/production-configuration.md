@@ -162,6 +162,17 @@ Before production use:
 5. Remove or lock down any unused accounts.
 6. Ensure admin users have email addresses if they need upload-request notifications.
 
+## Local Active Directory authentication
+
+The optional Local AD integration authenticates users against the configured LDAP endpoint and creates a local session without storing the directory password. Configure it from Admin → Microsoft Local AD Integration:
+
+- `AD server host`: use an `ldaps://` URL where possible, for example `ldaps://dc01.example.internal:636`.
+- `Base DN`: the directory subtree used to search users.
+- `Bind DN` and `Bind password`: a least-privilege service account used only to search the directory. The bind password is encrypted with `ENCRYPTION_MASTER_KEY` before it is stored in Redis.
+- Enable the integration only after testing the endpoint and firewall path from the app container.
+
+User authentication searches by `sAMAccountName`, then binds as the matched user with the submitted password. Passwords and directory tokens are never logged or stored. If a plain `ldap://` URL is used, traffic is not encrypted; prefer LDAPS and restrict the directory network path.
+
 ## Email delivery
 
 Email is used for direct text/file link delivery, upload-request links, and upload notifications. Configure one delivery method.

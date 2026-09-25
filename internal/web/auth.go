@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
@@ -19,6 +20,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-ldap/ldap/v3"
 
 	sec "ephemeral-link/internal/crypto"
 	"ephemeral-link/internal/redisstore"
@@ -267,7 +269,103 @@ func (a *App) microsoftCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) adLogin(w http.ResponseWriter, r *http.Request) {
-	a.render(w, r, 501, "login.html", Page{Title: a.t(r, "sign_in"), Error: a.t(r, "ad_login_not_configured")})
+	cfg, err := a.getIntegrationConfig(r.Context())
+	if err != nil || !cfg.ADEnabled || cfg.ADHost == "" || cfg.ADBaseDN == "" {
+		a.render(w, r, http.StatusNotImplemented, "login.html", Page{Title: a.t(r, "sign_in"), Error: a.t(r, "ad_login_not_configured")})
+		return
+	}
+	a.render(w, r, http.StatusOK, "login.html", Page{Title: a.t(r, "sign_in"), Error: a.t(r, "ad_login_prompt")})
+}
+
+func (a *App) adPost(w http.ResponseWriter, r *http.Request) {
+	username := strings.TrimSpace(r.FormValue("username"))
+	password := r.FormValue("password")
+	throttleID := strings.ToLower(username) + "|" + clientAddress(r)
+	limited, err := a.store.FailureLimitExceeded(r.Context(), "ad_login", throttleID, loginFailureLimit)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	if limited {
+		a.render(w, r, http.StatusTooManyRequests, "login.html", Page{Title: a.t(r, "sign_in"), Error: a.t(r, "too_many_attempts")})
+		return
+	}
+	user, err := a.authenticateAD(username, password)
+	if err != nil {
+		limited, registerErr := a.store.RegisterFailure(r.Context(), "ad_login", throttleID, loginFailureLimit, authFailureWindow)
+		if registerErr != nil {
+			a.bad(w, r, registerErr)
+			return
+		}
+		a.audit(r, "ad_login", username, "failed", "invalid directory credentials")
+		status := http.StatusUnauthorized
+		message := a.t(r, "invalid_login")
+		if limited {
+			status = http.StatusTooManyRequests
+			message = a.t(r, "too_many_attempts")
+		}
+		a.render(w, r, status, "login.html", Page{Title: a.t(r, "sign_in"), Error: message})
+		return
+	}
+	_ = a.store.ResetFailures(r.Context(), "ad_login", throttleID)
+	token, err := sec.Token()
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	if err := a.store.CreateSession(r.Context(), token, user.Username, sessionTTL); err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	a.auditAs(r, user.Username, "ad_login", user.Username, "success", "")
+	http.SetCookie(w, &http.Cookie{Name: sessionCookieName, Value: token, Path: "/", MaxAge: int(sessionTTL.Seconds()), HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: a.cfg.SecureCookies})
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (a *App) authenticateAD(username, password string) (redisstore.User, error) {
+	if username == "" || password == "" {
+		return redisstore.User{}, fmt.Errorf("invalid directory credentials")
+	}
+	cfg, err := a.getIntegrationConfig(context.Background())
+	if err != nil || !cfg.ADEnabled || cfg.ADHost == "" || cfg.ADBaseDN == "" {
+		return redisstore.User{}, fmt.Errorf("directory authentication unavailable")
+	}
+	endpoint := strings.TrimSpace(cfg.ADHost)
+	if !strings.Contains(endpoint, "://") {
+		endpoint = "ldaps://" + endpoint
+	}
+	options := []ldap.DialOpt{}
+	if strings.HasPrefix(strings.ToLower(endpoint), "ldaps://") {
+		options = append(options, ldap.DialWithTLSConfig(&tls.Config{MinVersion: tls.VersionTLS12}))
+	}
+	conn, err := ldap.DialURL(endpoint, options...)
+	if err != nil {
+		return redisstore.User{}, fmt.Errorf("directory unavailable")
+	}
+	defer conn.Close()
+	if cfg.ADBindDN != "" {
+		if err := conn.Bind(cfg.ADBindDN, cfg.ADBindPassword); err != nil {
+			return redisstore.User{}, fmt.Errorf("directory unavailable")
+		}
+	}
+	filter := "(&(objectClass=user)(sAMAccountName=" + ldap.EscapeFilter(username) + "))"
+	request := ldap.NewSearchRequest(cfg.ADBaseDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 2, 5, false, filter, []string{"mail", "displayName", "givenName", "sn"}, nil)
+	result, err := conn.Search(request)
+	if err != nil || len(result.Entries) != 1 {
+		return redisstore.User{}, fmt.Errorf("invalid directory credentials")
+	}
+	entry := result.Entries[0]
+	if err := conn.Bind(entry.DN, password); err != nil {
+		return redisstore.User{}, fmt.Errorf("invalid directory credentials")
+	}
+	first, last := splitName(entry.GetAttributeValue("displayName"))
+	if first == "" {
+		first = entry.GetAttributeValue("givenName")
+	}
+	if last == "" {
+		last = entry.GetAttributeValue("sn")
+	}
+	return redisstore.User{Username: "ad:" + strings.ToLower(username), Role: "user", FirstName: first, LastName: last, Email: entry.GetAttributeValue("mail"), AuthProvider: "ad", ExternalID: entry.DN, CreatedAt: time.Now().Unix()}, nil
 }
 
 func (a *App) requireAuth(next http.Handler) http.Handler {
@@ -672,6 +770,9 @@ func (a *App) adminSaveIntegrations(w http.ResponseWriter, r *http.Request) {
 		cfg.ADHost = strings.TrimSpace(r.FormValue("ad_host"))
 		cfg.ADBaseDN = strings.TrimSpace(r.FormValue("ad_base_dn"))
 		cfg.ADBindDN = strings.TrimSpace(r.FormValue("ad_bind_dn"))
+		if v := r.FormValue("ad_bind_password"); v != "" {
+			cfg.ADBindPassword = v
+		}
 	case "email":
 		cfg.SMTPEnabled = r.FormValue("smtp_enabled") == "on"
 		cfg.GraphEnabled = r.FormValue("graph_enabled") == "on"
