@@ -197,6 +197,7 @@ Status: in progress; README updated for master key and trusted proxy configurati
 
 ### 3.6 Test coverage
 
+- [x] Add config validation tests.
 - [ ] Add Redis claim semantics tests.
 - [ ] Add setup race tests.
 - [ ] Add passphrase/login brute-force tests.
@@ -204,7 +205,7 @@ Status: in progress; README updated for master key and trusted proxy configurati
 - [x] Add security header tests.
 - [x] Add request-size/CSRF tests.
 
-Status: in progress; focused tests cover audit CSV escaping, security headers, integration secret helpers, CSRF validation, and route-aware body limits.
+Status: in progress; focused tests cover config validation, audit CSV escaping, security headers, integration secret helpers, CSRF validation, and route-aware body limits.
 
 ## Final verification checklist
 
@@ -219,7 +220,7 @@ docker compose build
 
 Manual security checks:
 
-- [ ] App refuses to start without a valid `ENCRYPTION_MASTER_KEY`.
+- [x] App refuses to start without a valid `ENCRYPTION_MASTER_KEY`.
 - [ ] Claimed Redis items no longer retain payload/key fields.
 - [ ] Untrusted clients cannot spoof IPs with `X-Forwarded-For`.
 - [ ] Setup cannot create multiple initial admins under concurrent requests.
