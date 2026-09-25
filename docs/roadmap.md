@@ -27,9 +27,9 @@ Status: complete / confirmed in `internal/config/config.go` and `README.md`.
 - [x] Keep claim operation atomic with Redis Lua.
 - [x] Return the claimed item to the request handler for delivery.
 - [x] Remove wrapped key, payload nonce/ciphertext, and storage object path from Redis after a successful claim.
-- [ ] Add Redis-backed regression tests for the claim script.
+- [x] Add Redis-backed regression tests for the claim script.
 
-Status: implemented in `internal/redisstore/store.go`; tests still needed.
+Status: implemented in `internal/redisstore/store.go`; atomic claim and payload-wipe coverage is in `internal/redisstore/store_test.go`.
 
 ### 1.3 Trusted proxies instead of blindly trusting `X-Forwarded-For`
 
@@ -46,10 +46,10 @@ Status: implemented in `internal/web/server.go`, `internal/ratelimit/ratelimit.g
 
 - [x] Use Redis `SETNX` lock for initial admin creation.
 - [x] Recheck admin existence inside the locked creation path.
-- [ ] Add concurrent setup regression test.
+- [x] Add concurrent setup regression test.
 - [ ] Consider rate limiting setup attempts.
 
-Status: existing implementation reviewed in `internal/redisstore/store.go` and `internal/web/auth.go`; tests still needed.
+Status: existing implementation reviewed in `internal/redisstore/store.go` and `internal/web/auth.go`; concurrent setup coverage is in `internal/redisstore/store_test.go`.
 
 ### 1.5 Brute-force protection for passphrases and logins
 
@@ -158,9 +158,9 @@ Status: implemented route-aware POST body caps in `internal/web/server.go`; test
 - [x] Review container user, filesystem permissions, health checks, and restart policy.
 - [x] Avoid unnecessary writable paths.
 - [x] Document production Compose settings.
-- [ ] Validate hardened Compose config in Docker.
+- [x] Validate hardened Compose config in Docker.
 
-Status: implemented app service hardening in `docker-compose.yml` with read-only root filesystem, `/tmp` tmpfs, dropped capabilities, no-new-privileges, healthcheck, and required `ENCRYPTION_MASTER_KEY`; Docker validation still needed.
+Status: implemented app service hardening in `docker-compose.yml` with read-only root filesystem, `/tmp` tmpfs, dropped capabilities, no-new-privileges, healthcheck, and required `ENCRYPTION_MASTER_KEY`; `docker compose config` and `docker compose build` validated with a temporary test key.
 
 ### 3.2 File handling improvements
 
@@ -198,14 +198,14 @@ Status: in progress; README updated for master key and trusted proxy configurati
 ### 3.6 Test coverage
 
 - [x] Add config validation tests.
-- [ ] Add Redis claim semantics tests.
-- [ ] Add setup race tests.
+- [x] Add Redis claim semantics tests.
+- [x] Add setup race tests.
 - [ ] Add passphrase/login brute-force tests.
 - [x] Add audit CSV injection tests.
 - [x] Add security header tests.
 - [x] Add request-size/CSRF tests.
 
-Status: in progress; focused tests cover config validation, audit CSV escaping, security headers, integration secret helpers, CSRF validation, and route-aware body limits.
+Status: in progress; focused tests cover config validation, Redis claim/setup semantics, audit CSV escaping, security headers, integration secret helpers, CSRF validation, and route-aware body limits.
 
 ## Final verification checklist
 
