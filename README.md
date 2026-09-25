@@ -14,7 +14,11 @@ Ephemeral Link is a lightweight, Go-based “burn after reading” web app for s
 - Per-item random data keys wrapped by `ENCRYPTION_MASTER_KEY`
 - Argon2id passphrase hashing
 - Redis TTL expiry and atomic claim script for single-use access
-- Local encrypted file storage outside the web root
+- Local encrypted file storage outside the web root or S3-compatible encrypted object storage
+- Streaming encrypted file uploads and downloads
+- Scoped, revocable REST API keys
+- Multi-workspace membership, session switching, invitations, and workspace-scoped administration
+- Exact custom-domain allowlisting
 - English and German UI translations
 - Browser language detection with English fallback
 - Language cookie and language switcher
@@ -37,7 +41,7 @@ Passphrases are hashed with Argon2id. The passphrase is verified before the sing
 
 On first run, if no local administrator exists, the app redirects unauthenticated users to `/setup` to create the initial administrator account. The setup flow is disabled automatically as soon as an administrator exists. Local users are stored in the app's Redis-backed internal store with Argon2id password hashes. Link creation requires a session cookie, and admin screens require a signed-in user with the `administrator` role. Single-use reveal/download links remain accessible to recipients without an account.
 
-The login screen includes buttons for Microsoft Entra ID and local Active Directory sign-in. Microsoft Entra ID sign-in mirrors the M365 Toolbox model: the browser uses MSAL's SPA authorization-code-with-PKCE flow to get an access token for a backend API app registration, then the Go backend validates that access token against Entra JWKS metadata before creating an HTTP-only app session. Configure the frontend app registration with a SPA redirect URI of `<APP_BASE_URL>/login`, for example `https://links.example.com/login`, grant it the backend API app's delegated `access_as_user` permission, and enter the tenant ID, frontend client ID, backend API audience/client ID, and optional authority URL in Admin → Microsoft 365 Integration. Do not create or store a client secret for Microsoft login. The local Active Directory sign-in button is still configuration-only until LDAP validation is wired.
+The login screen includes buttons for Microsoft Entra ID and optional local Active Directory sign-in. Microsoft Entra ID sign-in mirrors the M365 Toolbox model: the browser uses MSAL's SPA authorization-code-with-PKCE flow to get an access token for a backend API app registration, then the Go backend validates that access token against Entra JWKS metadata before creating an HTTP-only app session. Configure the frontend app registration with a SPA redirect URI of `<APP_BASE_URL>/login`, for example `https://links.example.com/login`, grant it the backend API app's delegated `access_as_user` permission, and enter the tenant ID, frontend client ID, backend API audience/client ID, and optional authority URL in Admin → Microsoft 365 Integration. Do not create or store a client secret for Microsoft login. Local Active Directory authentication supports LDAP/LDAPS lookup followed by a user bind; prefer LDAPS and test the directory path from the app container before enabling it.
 
 ## Audit logs
 
@@ -64,9 +68,9 @@ To configure Microsoft Graph `sendMail` with app-only authentication:
 
 Review the app registration regularly, rotate credentials before expiry, and do not grant broader Graph permissions than `Mail.Send` for notification delivery. Never paste Graph secrets into logs, tickets, screenshots, browser local storage, or source control.
 
-## Limitations
+## Limitations and operational boundaries
 
-This MVP uses local filesystem storage. New direct file links stream authenticated encrypted chunks during upload and download; text secrets and legacy/upload-request payloads still use bounded in-memory processing. Keep `MAX_FILE_SIZE` conservative. The storage interface is intentionally simple so S3-compatible storage can be added later. This app is for ephemeral sharing, not durable storage or backups.
+Ephemeral Link is for temporary sharing, not durable storage or backups. New direct file links stream authenticated encrypted chunks during upload and download; text secrets and legacy/upload-request payloads still use bounded in-memory processing. Keep `MAX_FILE_SIZE` conservative. Choose either the local encrypted backend or the S3-compatible backend at deployment time. Switching an existing installation from local storage to S3 requires the documented maintenance-window migration; the migration command is intentionally non-destructive and does not silently delete local source objects.
 
 ## Quick start with Docker Compose
 
@@ -114,7 +118,7 @@ Do not reuse the example value above. If you change `ENCRYPTION_MASTER_KEY`, exi
 
 Requirements:
 
-- Go 1.23+
+- Go 1.25+
 - Redis or Valkey
 
 ```sh
@@ -150,7 +154,7 @@ go test ./...
 | `DEFAULT_TTL_SECONDS` | Default expiry for new items. |
 | `MAX_TTL_SECONDS` | Upper bound for allowed expiry. Defaults to 30 days. |
 | `ENCRYPTION_MASTER_KEY` | Required base64-encoded 32-byte master key, optionally prefixed with `base64:`. |
-- `RATE_LIMIT_PER_MINUTE` | Per-IP request limit. |
+| `RATE_LIMIT_PER_MINUTE` | Per-IP request limit. |
 | `TRUSTED_PROXIES` | Optional comma-separated trusted reverse proxy IPs/CIDRs. `X-Forwarded-For` and `X-Real-IP` are ignored unless the direct peer is trusted. |
 | `CUSTOM_DOMAINS` | Optional comma-separated hostnames allowed to replace `APP_BASE_URL` when generating links. Hosts are matched exactly; unallowlisted `Host` headers use `APP_BASE_URL`. |
 | `DEFAULT_WORKSPACE_ID` | Workspace assigned to legacy records and new records without an explicit workspace; defaults to `default`. |
@@ -163,9 +167,9 @@ go test ./...
 Administrators can manage scoped API keys through the admin API endpoints. The raw key is returned only when it is created; only a SHA-256 hash is stored in Redis.
 
 - `GET /api/v1/audit` requires `Authorization: Bearer <key>` with the `reports:read` scope.
-- `GET /admin/api-keys` lists key metadata without hashes or raw values.
+- `GET /admin/api-keys` lists metadata-only keys for the active workspace, without hashes or raw values.
 - `POST /admin/api-keys` creates a key with `name`, one or more `scope` values, and an optional Unix `expires_at`; the raw key is returned once.
-- `POST /admin/api-keys/{id}/revoke` revokes a key immediately.
+- `POST /admin/api-keys/{id}/revoke` revokes a key immediately, but only when it belongs to the active workspace.
 - `POST /admin/workspace-invitations` creates a one-time workspace invitation and returns the token once.
 - `POST /auth/workspace-invitations/accept` assigns the authenticated user to the invited workspace and role.
 - `GET /account/workspaces` lists the authenticated user’s memberships and active workspace.
@@ -176,6 +180,26 @@ Admin management endpoints require the normal administrator session and CSRF tok
 ## Roadmap
 
 See [docs/roadmap.md](docs/roadmap.md) for the v1.0.0 and v2.0.0 goals.
+
+## Storage and workspace migrations
+
+Fresh installations do not need migration commands. Configure the selected storage backend and `DEFAULT_WORKSPACE_ID` before first startup.
+
+For an existing local-storage installation, back up Redis metadata and local encrypted storage, run the application in maintenance mode, then migrate active objects to S3:
+
+```sh
+go run ./cmd/migrate-storage
+```
+
+Verify active links before switching `STORAGE_BACKEND=s3`. The migration updates Redis object paths only after successful uploads and leaves local source objects in place for rollback and verification.
+
+Existing records can be reassigned after reviewing the target workspace:
+
+```sh
+go run ./cmd/migrate-workspaces -from default -to team-a
+```
+
+For full deployment, backup, S3, workspace, and reverse-proxy guidance, see [docs/production-configuration.md](docs/production-configuration.md) and [docs/production-deployment-checklist.md](docs/production-deployment-checklist.md).
 
 ## Production deployment notes
 
@@ -191,7 +215,7 @@ Minimum production requirements:
 - Complete the first-run `/setup` flow with a strong administrator password before exposing the app broadly.
 - Do not log generated links, passphrases, or payloads.
 - Persist Redis/Valkey data if you want TTL metadata to survive restarts.
-- Persist `STORAGE_PATH` only for the life of active links; do not treat it as backup storage.
+- If using local storage, persist `STORAGE_PATH` for the life of active links; if using S3, monitor the configured bucket and lifecycle policy. Neither is a substitute for a deliberate backup policy.
 
 ## Visual assets
 

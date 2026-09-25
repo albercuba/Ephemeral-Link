@@ -269,7 +269,7 @@ Do not create or store a client secret for the browser login app.
 
 ## Local Active Directory
 
-The Local AD settings are currently configuration-only until LDAP validation is fully implemented. Do not rely on the Local AD button for production authentication unless the LDAP integration has been completed and tested in your deployment.
+The Local AD settings use LDAP/LDAPS lookup followed by a user bind. Prefer LDAPS and do not enable the integration until the configured directory endpoint, certificate trust, firewall path, and user bind have been tested from the app container. The repository does not include a live directory test environment, so deployment-specific validation remains the operator’s responsibility.
 
 ## Logging and audit logs
 

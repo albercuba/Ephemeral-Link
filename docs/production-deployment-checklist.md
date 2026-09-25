@@ -41,16 +41,17 @@ Use this checklist before exposing Ephemeral Link to users. It is intentionally 
 ## 2. Prepare persistent storage
 
 - [ ] Confirm Redis/Valkey persistence is enabled and stored on a persistent volume.
-- [ ] Confirm `STORAGE_PATH` is mounted as persistent storage and is outside the public web root.
+- [ ] If using `STORAGE_BACKEND=local`, confirm `STORAGE_PATH` is mounted as persistent storage and is outside the public web root.
+- [ ] If using `STORAGE_BACKEND=s3`, configure the bucket, endpoint, TLS, and least-privilege credentials before startup; do not expose S3 credentials to clients.
 - [ ] For Docker Compose, verify named volumes exist or will be created:
 
   ```sh
   docker volume ls
   ```
 
-- [ ] Confirm `app_storage` maps to `/app/data/storage` inside the app container.
+- [ ] Confirm `app_storage` maps to `/app/data/storage` inside the app container when using local storage.
 - [ ] Confirm storage is not served directly by the reverse proxy.
-- [ ] Confirm disk monitoring/alerting exists for the host or volume backing `STORAGE_PATH`.
+- [ ] Confirm disk monitoring/alerting exists for the host or volume backing `STORAGE_PATH`, or object-store monitoring exists for S3.
 
 ## 3. Configure reverse proxy and TLS
 
@@ -75,8 +76,10 @@ Check that:
 - [ ] `SECURE_COOKIES` is `true`.
 - [ ] `ENCRYPTION_MASTER_KEY` is set from a real secret.
 - [ ] `REDIS_URL` points to the private Redis/Valkey service or managed Redis endpoint.
-- [ ] `STORAGE_PATH` points to the mounted storage location.
+- [ ] `STORAGE_BACKEND` is explicitly set to `local` or `s3`.
+- [ ] If using local storage, `STORAGE_PATH` points to the mounted storage location.
 - [ ] `app_storage` and `redis_data` volumes are present or replaced by intentional production mounts.
+- [ ] If using S3, `S3_ENDPOINT`, `S3_BUCKET`, credentials, and `S3_SECURE=true` are configured.
 
 ## 5. Build and start
 
@@ -133,7 +136,7 @@ If Microsoft login is enabled:
 
 ### Local Active Directory
 
-- [ ] Do not depend on local AD login until LDAP validation is fully implemented and tested for your environment.
+- [ ] Test the configured LDAP/LDAPS endpoint and user bind from the app container before enabling local AD login. Prefer LDAPS in production.
 
 ## 8. Perform smoke tests
 
@@ -154,7 +157,7 @@ If Microsoft login is enabled:
 - [ ] Monitor disk usage for the storage volume.
 - [ ] Monitor app restarts and error logs.
 - [ ] Monitor reverse proxy 4xx/5xx rates and upload/download timeouts.
-- [ ] Periodically verify cleanup removes expired/orphaned encrypted files.
+- [ ] Periodically verify cleanup removes expired/orphaned encrypted files or unreferenced S3 objects.
 - [ ] Rotate SMTP/Graph credentials according to your organization’s policy.
 
 ## 10. Backup and recovery policy
