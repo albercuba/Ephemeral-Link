@@ -191,11 +191,11 @@ Status: complete for server-rendered templates; visible labels, admin status val
 
 ### 3.4 Code hygiene
 
-- [ ] Split large handlers where it improves readability.
-- [ ] Remove dead code and unused assets.
+- [x] Split large handlers where it improves readability.
+- [x] Remove dead code and unused assets.
 - [x] Keep security-sensitive helpers small and tested.
 
-Status: partially complete; security-sensitive helpers are covered and workspace authorization boundaries are tested. Splitting the remaining large handlers and removing dead assets is still maintenance work.
+Status: complete for the current scope; the admin page data-loading path is separated from the HTTP handler, security-sensitive helpers are covered, and the static asset audit found no unused assets.
 
 ### 3.5 Documentation cleanup
 

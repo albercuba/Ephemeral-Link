@@ -690,37 +690,48 @@ func (a *App) admin(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	page, err := a.adminPage(r, user)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	a.render(w, r, 200, "admin.html", page)
+}
+
+func (a *App) adminPage(r *http.Request, user *redisstore.User) (Page, error) {
 	workspace := a.workspaceForRequest(r)
 	items, err := a.store.ListAvailableItemsInWorkspace(r.Context(), workspace)
 	if err != nil {
-		a.bad(w, r, err)
-		return
+		return Page{}, err
 	}
 	uploadRequests, err := a.store.ListAvailableUploadRequestsInWorkspace(r.Context(), workspace)
 	if err != nil {
-		a.bad(w, r, err)
-		return
+		return Page{}, err
 	}
 	users, err := a.store.ListUsersInWorkspace(r.Context(), workspace)
 	if err != nil {
-		a.bad(w, r, err)
-		return
+		return Page{}, err
 	}
 	integration, err := a.getIntegrationConfig(r.Context())
 	if err != nil {
-		a.bad(w, r, err)
-		return
+		return Page{}, err
 	}
 	allAuditEvents, err := a.store.ListAuditEventsInWorkspace(r.Context(), 500, workspace)
 	if err != nil {
-		a.bad(w, r, err)
-		return
+		return Page{}, err
 	}
 	auditPage := buildAuditPage(r, allAuditEvents)
-	analytics := buildAdminAnalytics(items, uploadRequests, allAuditEvents)
-	disk := diskInfo(a.cfg.StoragePath)
-	message := adminSavedMessage(a.t(r, "settings_saved_"+r.URL.Query().Get("saved")))
-	a.render(w, r, 200, "admin.html", Page{Title: a.t(r, "admin_title"), User: user, Items: items, UploadRequests: uploadRequests, AuditEvents: auditPage.Events, AuditFilterEvent: auditPage.Event, AuditCSVURL: auditCSVURL(r.URL.Query()), AuditFilterResult: auditPage.Result, AuditFilterActor: auditPage.Actor, AuditFilterQuery: auditPage.Query, AuditPage: auditPage.Page, AuditTotal: auditPage.Total, AuditStart: auditPage.Start, AuditEnd: auditPage.End, AuditPrevURL: auditPage.PrevURL, AuditNextURL: auditPage.NextURL, AuditHasPrev: auditPage.HasPrev, AuditHasNext: auditPage.HasNext, HasLinks: len(items)+len(uploadRequests) > 0, Users: users, Integration: integration, Disk: disk, Analytics: analytics, Message: message})
+	return Page{
+		Title: a.t(r, "admin_title"), User: user, Items: items, UploadRequests: uploadRequests,
+		AuditEvents: auditPage.Events, AuditFilterEvent: auditPage.Event, AuditCSVURL: auditCSVURL(r.URL.Query()),
+		AuditFilterResult: auditPage.Result, AuditFilterActor: auditPage.Actor, AuditFilterQuery: auditPage.Query,
+		AuditPage: auditPage.Page, AuditTotal: auditPage.Total, AuditStart: auditPage.Start, AuditEnd: auditPage.End,
+		AuditPrevURL: auditPage.PrevURL, AuditNextURL: auditPage.NextURL, AuditHasPrev: auditPage.HasPrev,
+		AuditHasNext: auditPage.HasNext, HasLinks: len(items)+len(uploadRequests) > 0, Users: users,
+		Integration: integration, Disk: diskInfo(a.cfg.StoragePath),
+		Analytics: buildAdminAnalytics(items, uploadRequests, allAuditEvents),
+		Message:   adminSavedMessage(a.t(r, "settings_saved_"+r.URL.Query().Get("saved"))),
+	}, nil
 }
 
 type auditPageData struct {
