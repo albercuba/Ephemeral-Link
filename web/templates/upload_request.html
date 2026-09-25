@@ -24,13 +24,13 @@
       <label class="full-field" for="file-input">
         {{call .T "file_label"}}
         <span class="file-control">
-          <span class="file-button"><i class="fa-solid fa-file" aria-hidden="true"></i> {{call .T "choose_file_button"}}</span>
+          <span class="file-button"><svg class="ui-icon ui-icon-file" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.75h6.5L18 8.25v12H7z"/><path d="M13.5 3.75v4.5H18"/><path d="M9.75 13h4.5M9.75 16h3"/></svg> {{call .T "choose_file_button"}}</span>
           <span id="file-name" class="file-name">{{call .T "no_file_selected"}}</span>
           <input id="file-input" class="file-input" type="file" name="file" required>
         </span>
       </label>
       <label class="checkbox-label"><input type="checkbox" name="notify_requester" checked><span>{{call .T "notify_requester_label"}}</span></label>
-      <button type="submit"><i class="fa-solid fa-upload" aria-hidden="true"></i> {{call .T "upload_file_button"}}</button>
+      <button type="submit"><svg class="ui-icon ui-icon-upload" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15.5V4.5"/><path d="M7.75 8.75 12 4.5l4.25 4.25"/><path d="M5 16.5v2.25A1.75 1.75 0 0 0 6.75 20.5h10.5A1.75 1.75 0 0 0 19 18.75V16.5"/></svg> {{call .T "upload_file_button"}}</button>
     </form>
   </section>
 </main>

@@ -53,6 +53,18 @@ textarea {
     font-family: var(--font-main);
 }
 
+.ui-icon {
+    width: 1.05em;
+    height: 1.05em;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vertical-align: -0.16em;
+}
+
 body {
     margin: 0;
     background: var(--bg);
@@ -1471,7 +1483,10 @@ textarea,
 }
 
 .action-row button .fa-link,
-.file-button .fa-file {
+.file-button .fa-file,
+.action-row button .ui-icon,
+.file-button .ui-icon,
+.upload-request-page button .ui-icon {
     margin-right: 0.45rem;
 }
 
