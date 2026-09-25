@@ -104,12 +104,78 @@ func TestIntegrationSecretDecryptAllowsPlaintextLegacyValues(t *testing.T) {
 	}
 }
 
+func TestCSRFMiddlewareAllowsValidToken(t *testing.T) {
+	app := &App{}
+	called := false
+	handler := app.csrfMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	request := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader("csrf=token"))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.AddCookie(&http.Cookie{Name: "csrf", Value: "token"})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+
+	if !called {
+		t.Fatal("next handler was not called")
+	}
+	if got := recorder.Result().StatusCode; got != http.StatusNoContent {
+		t.Fatalf("status = %d, want %d", got, http.StatusNoContent)
+	}
+}
+
+func TestCSRFMiddlewareRejectsMissingOrInvalidToken(t *testing.T) {
+	app := &App{}
+	handler := app.csrfMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("next handler should not be called")
+	}))
+	tests := []struct {
+		name   string
+		body   string
+		cookie string
+	}{
+		{name: "missing", body: "", cookie: "token"},
+		{name: "invalid", body: "csrf=wrong", cookie: "token"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(tt.body))
+			request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			request.AddCookie(&http.Cookie{Name: "csrf", Value: tt.cookie})
+			recorder := httptest.NewRecorder()
+			handler.ServeHTTP(recorder, request)
+			if got := recorder.Result().StatusCode; got != http.StatusForbidden {
+				t.Fatalf("status = %d, want %d", got, http.StatusForbidden)
+			}
+		})
+	}
+}
+
+func TestCSRFMiddlewareRejectsOversizedBody(t *testing.T) {
+	app := &App{}
+	handler := app.csrfMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("next handler should not be called")
+	}))
+	body := "csrf=token&payload=" + strings.Repeat("a", int(maxFormBodySize)+1)
+	request := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.AddCookie(&http.Cookie{Name: "csrf", Value: "token"})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+
+	if got := recorder.Result().StatusCode; got != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want %d", got, http.StatusRequestEntityTooLarge)
+	}
+}
+
 func TestPostBodyLimitIsRouteAware(t *testing.T) {
 	app := &App{cfg: config.Config{MaxFileSize: 10}}
 	tests := map[string]int64{
-		"/login":                   maxFormBodySize,
-		"/admin/logo":              maxLogoBodySize,
-		"/secrets/file":        10 + maxFormBodySize,
+		"/login":                maxFormBodySize,
+		"/admin/logo":           maxLogoBodySize,
+		"/secrets/file":         10 + maxFormBodySize,
 		"/upload/request-token": 10 + maxFormBodySize,
 	}
 	for path, want := range tests {

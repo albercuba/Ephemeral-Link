@@ -146,10 +146,10 @@ Status: implemented for public file links and authenticated upload-request downl
 
 - [x] Review all state-changing routes for CSRF coverage.
 - [x] Ensure upload/text/request body limits are enforced consistently.
-- [ ] Add tests for oversized requests and missing/invalid CSRF tokens.
+- [x] Add tests for oversized requests and missing/invalid CSRF tokens.
 - [x] Add tests for route-aware POST body limits.
 
-Status: implemented route-aware POST body caps in `internal/web/server.go`; route limit tests added, CSRF token tests still needed.
+Status: implemented route-aware POST body caps in `internal/web/server.go`; tests cover missing/invalid CSRF tokens, oversized form bodies, and route-specific body limits.
 
 ## Phase 3 — Lower priority hardening, hygiene, and tests
 
@@ -202,9 +202,9 @@ Status: in progress; README updated for master key and trusted proxy configurati
 - [ ] Add passphrase/login brute-force tests.
 - [x] Add audit CSV injection tests.
 - [x] Add security header tests.
-- [ ] Add request-size/CSRF tests.
+- [x] Add request-size/CSRF tests.
 
-Status: not started.
+Status: in progress; focused tests cover audit CSV escaping, security headers, integration secret helpers, CSRF validation, and route-aware body limits.
 
 ## Final verification checklist
 
