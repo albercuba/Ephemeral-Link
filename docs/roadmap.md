@@ -128,10 +128,10 @@ Status: partially implemented; external Google Fonts and Font Awesome stylesheet
 - [x] Encrypt SMTP credentials, Graph client secrets, and other integration secrets before storing them in Redis.
 - [x] Reuse the master-key wrapping design or equivalent reviewed design.
 - [x] Avoid displaying existing secret values back to the UI.
-- [ ] Add tests for save/load behavior.
-- [ ] Add explicit migration coverage for plaintext legacy values.
+- [x] Add tests for save/load behavior.
+- [x] Add explicit migration coverage for plaintext legacy values.
 
-Status: implemented for SMTP password and Graph client secret in `internal/web/server.go`; tests still needed.
+Status: implemented for SMTP password and Graph client secret in `internal/web/server.go`; helper tests cover encryption round-trip, no double encryption, and plaintext legacy values.
 
 ### 2.8 Turn the side-effecting download GET into a POST
 
@@ -147,8 +147,9 @@ Status: implemented for public file links and authenticated upload-request downl
 - [x] Review all state-changing routes for CSRF coverage.
 - [x] Ensure upload/text/request body limits are enforced consistently.
 - [ ] Add tests for oversized requests and missing/invalid CSRF tokens.
+- [x] Add tests for route-aware POST body limits.
 
-Status: implemented route-aware POST body caps in `internal/web/server.go`; tests still needed.
+Status: implemented route-aware POST body caps in `internal/web/server.go`; route limit tests added, CSRF token tests still needed.
 
 ## Phase 3 — Lower priority hardening, hygiene, and tests
 
@@ -199,8 +200,8 @@ Status: in progress; README updated for master key and trusted proxy configurati
 - [ ] Add Redis claim semantics tests.
 - [ ] Add setup race tests.
 - [ ] Add passphrase/login brute-force tests.
-- [ ] Add audit CSV injection tests.
-- [ ] Add security header tests.
+- [x] Add audit CSV injection tests.
+- [x] Add security header tests.
 - [ ] Add request-size/CSRF tests.
 
 Status: not started.
