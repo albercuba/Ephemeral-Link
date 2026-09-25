@@ -104,6 +104,32 @@ func TestClaimIsAtomicAndWipesPayloadFields(t *testing.T) {
 	}
 }
 
+func TestWorkspaceInvitationIsEmailBoundAndSingleUse(t *testing.T) {
+	store, _ := newTestStore(t)
+	ctx := context.Background()
+	invitation, token, err := store.CreateWorkspaceInvitation(ctx, "team-a", "member@example.com", "user", time.Now().Add(time.Hour).Unix())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if invitation.WorkspaceID != "team-a" || token == "" {
+		t.Fatalf("invitation = %#v", invitation)
+	}
+	if err := store.AddWorkspaceMembership(ctx, "member", "team-a", "user"); err != nil {
+		t.Fatal(err)
+	}
+	member, err := store.HasWorkspaceMembership(ctx, "member", "team-a")
+	if err != nil || !member {
+		t.Fatalf("membership = %v, %v", member, err)
+	}
+	accepted, err := store.AcceptWorkspaceInvitation(ctx, token)
+	if err != nil || accepted.ID != invitation.ID {
+		t.Fatalf("accepted invitation = %#v, %v", accepted, err)
+	}
+	if _, err := store.AcceptWorkspaceInvitation(ctx, token); !errors.Is(err, ErrInvalidAPIKey) {
+		t.Fatalf("second invitation acceptance error = %v", err)
+	}
+}
+
 func TestAPIKeyIsOneTimePresentedScopedRevocableAndExpiring(t *testing.T) {
 	store, _ := newTestStore(t)
 	ctx := context.Background()
