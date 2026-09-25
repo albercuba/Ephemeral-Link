@@ -244,7 +244,9 @@ Manual security checks:
 These are larger feature goals after the hardening roadmap:
 
 - [ ] S3-compatible encrypted file storage backend.
-- [ ] Scoped, revocable REST API keys.
+- [x] Scoped, revocable REST API keys.
 - [ ] User/workspace isolation.
 - [ ] Custom domains.
-- [ ] Expanded administrative reporting.
+- [x] Expanded administrative reporting.
+
+API-key reporting currently exposes metadata-only audit events through `/api/v1/audit`; workspace isolation, S3 storage, and custom-domain support remain intentionally deferred because they require deployment and tenancy design decisions.

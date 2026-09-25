@@ -144,11 +144,22 @@ go test ./...
 | `DEFAULT_TTL_SECONDS` | Default expiry for new items. |
 | `MAX_TTL_SECONDS` | Upper bound for allowed expiry. Defaults to 30 days. |
 | `ENCRYPTION_MASTER_KEY` | Required base64-encoded 32-byte master key, optionally prefixed with `base64:`. |
-| `RATE_LIMIT_PER_MINUTE` | Per-IP request limit. |
+- `RATE_LIMIT_PER_MINUTE` | Per-IP request limit. |
 | `TRUSTED_PROXIES` | Optional comma-separated trusted reverse proxy IPs/CIDRs. `X-Forwarded-For` and `X-Real-IP` are ignored unless the direct peer is trusted. |
 | `ALLOWED_LANGUAGES` | Comma-separated language list, default `en,de`. |
 | `DEFAULT_LANGUAGE` | Default UI language, default `en`. |
 | `SECURE_COOKIES` | Set `true` behind HTTPS in production. |
+
+## Scoped API keys
+
+Administrators can manage scoped API keys through the admin API endpoints. The raw key is returned only when it is created; only a SHA-256 hash is stored in Redis.
+
+- `GET /api/v1/audit` requires `Authorization: Bearer <key>` with the `reports:read` scope.
+- `GET /admin/api-keys` lists key metadata without hashes or raw values.
+- `POST /admin/api-keys` creates a key with `name`, one or more `scope` values, and an optional Unix `expires_at`; the raw key is returned once.
+- `POST /admin/api-keys/{id}/revoke` revokes a key immediately.
+
+Admin management endpoints require the normal administrator session and CSRF token. Keep API keys out of URLs, logs, browser storage, and source control.
 
 ## Roadmap
 

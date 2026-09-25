@@ -458,6 +458,124 @@ func currentUser(r *http.Request) (*redisstore.User, bool) {
 	return user, ok
 }
 
+var allowedAPIKeyScopes = map[string]struct{}{"reports:read": {}, "reports:write": {}, "admin": {}}
+
+func parseAPIKeyScopes(values []string) ([]string, error) {
+	seen := map[string]struct{}{}
+	var scopes []string
+	for _, raw := range values {
+		for _, value := range strings.Split(raw, ",") {
+			value = strings.TrimSpace(value)
+			if value == "" {
+				continue
+			}
+			if _, ok := allowedAPIKeyScopes[value]; !ok {
+				return nil, fmt.Errorf("unsupported api key scope")
+			}
+			if _, ok := seen[value]; !ok {
+				seen[value] = struct{}{}
+				scopes = append(scopes, value)
+			}
+		}
+	}
+	if len(scopes) == 0 {
+		return nil, fmt.Errorf("at least one api key scope is required")
+	}
+	return scopes, nil
+}
+
+func (a *App) apiAudit(w http.ResponseWriter, r *http.Request) {
+	authorization := strings.TrimSpace(r.Header.Get("Authorization"))
+	if !strings.HasPrefix(authorization, "Bearer ") {
+		http.Error(w, "authentication required", http.StatusUnauthorized)
+		return
+	}
+	if _, err := a.store.AuthenticateAPIKey(r.Context(), strings.TrimSpace(strings.TrimPrefix(authorization, "Bearer ")), "reports:read"); err != nil {
+		http.Error(w, "authentication required", http.StatusUnauthorized)
+		return
+	}
+	limit := 100
+	if raw := r.URL.Query().Get("limit"); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed < 1 || parsed > 500 {
+			http.Error(w, "invalid limit", http.StatusBadRequest)
+			return
+		}
+		limit = parsed
+	}
+	events, err := a.store.ListAuditEvents(r.Context(), int64(limit))
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"events": events})
+}
+
+func (a *App) adminAPIKeys(w http.ResponseWriter, r *http.Request) {
+	if _, ok := a.requireAdmin(w, r); !ok {
+		return
+	}
+	keys, err := a.store.ListAPIKeys(r.Context())
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	metadata := make([]map[string]any, 0, len(keys))
+	for _, key := range keys {
+		metadata = append(metadata, map[string]any{"id": key.ID, "name": key.Name, "scopes": key.Scopes, "created_at": key.CreatedAt, "expires_at": key.ExpiresAt, "revoked_at": key.RevokedAt})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"keys": metadata})
+}
+
+func (a *App) adminCreateAPIKey(w http.ResponseWriter, r *http.Request) {
+	if _, ok := a.requireAdmin(w, r); !ok {
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" || len(name) > 100 {
+		http.Error(w, "invalid api key name", http.StatusBadRequest)
+		return
+	}
+	scopes, err := parseAPIKeyScopes(r.Form["scope"])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	expiresAt := int64(0)
+	if raw := strings.TrimSpace(r.FormValue("expires_at")); raw != "" {
+		expiresAt, err = strconv.ParseInt(raw, 10, 64)
+		if err != nil || expiresAt <= time.Now().Unix() {
+			http.Error(w, "invalid api key expiration", http.StatusBadRequest)
+			return
+		}
+	}
+	key, value, err := a.store.CreateAPIKey(r.Context(), name, scopes, expiresAt)
+	if err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	a.audit(r, "admin_create_api_key", key.ID, "success", "scopes="+strings.Join(scopes, ","))
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"key": value, "id": key.ID, "name": key.Name, "scopes": key.Scopes, "created_at": key.CreatedAt, "expires_at": key.ExpiresAt})
+}
+
+func (a *App) adminRevokeAPIKey(w http.ResponseWriter, r *http.Request) {
+	if _, ok := a.requireAdmin(w, r); !ok {
+		return
+	}
+	id := chi.URLParam(r, "id")
+	if err := a.store.RevokeAPIKey(r.Context(), id); err != nil {
+		a.bad(w, r, err)
+		return
+	}
+	a.audit(r, "admin_revoke_api_key", id, "success", "")
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
+}
+
 func (a *App) admin(w http.ResponseWriter, r *http.Request) {
 	user, ok := a.requireAdmin(w, r)
 	if !ok {

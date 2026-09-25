@@ -10,6 +10,19 @@ import (
 	"ephemeral-link/internal/config"
 )
 
+func TestParseAPIKeyScopesValidatesAndDeduplicates(t *testing.T) {
+	scopes, err := parseAPIKeyScopes([]string{"reports:read,reports:write", "reports:read"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(scopes) != 2 || scopes[0] != "reports:read" || scopes[1] != "reports:write" {
+		t.Fatalf("scopes = %#v", scopes)
+	}
+	if _, err := parseAPIKeyScopes([]string{"unknown"}); err == nil {
+		t.Fatal("unsupported scope was accepted")
+	}
+}
+
 func TestTrustedProxyMiddlewareUsesForwardedClientOnlyForTrustedPeer(t *testing.T) {
 	trusted, err := parseTrustedProxies([]string{"10.0.0.1"})
 	if err != nil {

@@ -2,11 +2,14 @@ package redisstore
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -52,6 +55,18 @@ type CreatedReceipt struct {
 	EmailStatus string
 }
 
+type APIKey struct {
+	ID        string
+	Name      string
+	Hash      string
+	Scopes    []string
+	CreatedAt int64
+	ExpiresAt int64
+	RevokedAt int64
+}
+
+var ErrInvalidAPIKey = errors.New("invalid api key")
+
 type Store struct{ rdb *redis.Client }
 
 func New(url string) (*Store, error) {
@@ -84,8 +99,10 @@ func key(id string) string                  { return "el:item:" + id }
 func uploadRequestKey(id string) string     { return "el:upload_request:" + id }
 func auditKey(id string) string             { return "el:audit:" + id }
 func createdReceiptKey(token string) string { return "el:created_receipt:" + token }
+func apiKeyKey(id string) string            { return "el:api_key:" + id }
 
 const auditIndexKey = "el:audit:index"
+const apiKeyPrefix = "elak_"
 
 func (s *Store) Create(ctx context.Context, item Item, ttl time.Duration) error {
 	m := map[string]any{
@@ -301,6 +318,103 @@ func (s *Store) GetSession(ctx context.Context, token string) (string, error) {
 }
 func (s *Store) DeleteSession(ctx context.Context, token string) error {
 	return s.rdb.Del(ctx, sessionKey(token)).Err()
+}
+
+func newAPIKeyValue() (string, error) {
+	value := make([]byte, 32)
+	if _, err := rand.Read(value); err != nil {
+		return "", err
+	}
+	return apiKeyPrefix + base64.RawURLEncoding.EncodeToString(value), nil
+}
+
+func hashAPIKey(value string) string {
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])
+}
+
+func (s *Store) CreateAPIKey(ctx context.Context, name string, scopes []string, expiresAt int64) (APIKey, string, error) {
+	value, err := newAPIKeyValue()
+	if err != nil {
+		return APIKey{}, "", err
+	}
+	idBytes := make([]byte, 12)
+	if _, err := rand.Read(idBytes); err != nil {
+		return APIKey{}, "", err
+	}
+	id := base64.RawURLEncoding.EncodeToString(idBytes)
+	created := time.Now().Unix()
+	key := APIKey{ID: id, Name: name, Hash: hashAPIKey(value), Scopes: append([]string(nil), scopes...), CreatedAt: created, ExpiresAt: expiresAt}
+	if err := s.rdb.HSet(ctx, apiKeyKey(id), map[string]any{"name": name, "hash": key.Hash, "scopes": strings.Join(scopes, ","), "created_at": created, "expires_at": expiresAt, "revoked_at": 0}).Err(); err != nil {
+		return APIKey{}, "", err
+	}
+	return key, value, nil
+}
+
+func (s *Store) AuthenticateAPIKey(ctx context.Context, value, scope string) (APIKey, error) {
+	if !strings.HasPrefix(value, apiKeyPrefix) {
+		return APIKey{}, ErrInvalidAPIKey
+	}
+	hash := hashAPIKey(value)
+	keys, err := s.scanKeys(ctx, "el:api_key:*")
+	if err != nil {
+		return APIKey{}, err
+	}
+	now := time.Now().Unix()
+	for _, redisKey := range keys {
+		m, err := s.rdb.HGetAll(ctx, redisKey).Result()
+		if err != nil || m["hash"] != hash || m["revoked_at"] != "0" || (i64(m["expires_at"]) > 0 && i64(m["expires_at"]) <= now) {
+			continue
+		}
+		key := apiKeyFromMap(redisKey, m)
+		if scope != "" && !containsString(key.Scopes, scope) {
+			return APIKey{}, ErrInvalidAPIKey
+		}
+		return key, nil
+	}
+	return APIKey{}, ErrInvalidAPIKey
+}
+
+func (s *Store) ListAPIKeys(ctx context.Context) ([]APIKey, error) {
+	keys, err := s.scanKeys(ctx, "el:api_key:*")
+	if err != nil {
+		return nil, err
+	}
+	out := make([]APIKey, 0, len(keys))
+	for _, key := range keys {
+		m, err := s.rdb.HGetAll(ctx, key).Result()
+		if err == nil && len(m) > 0 {
+			out = append(out, apiKeyFromMap(key, m))
+		}
+	}
+	return out, nil
+}
+
+func (s *Store) RevokeAPIKey(ctx context.Context, id string) error {
+	if id == "" {
+		return ErrInvalidAPIKey
+	}
+	return s.rdb.HSet(ctx, apiKeyKey(id), "revoked_at", time.Now().Unix()).Err()
+}
+
+func apiKeyFromMap(key string, m map[string]string) APIKey {
+	id := strings.TrimPrefix(key, "el:api_key:")
+	var scopes []string
+	for _, scope := range strings.Split(m["scopes"], ",") {
+		if scope = strings.TrimSpace(scope); scope != "" {
+			scopes = append(scopes, scope)
+		}
+	}
+	return APIKey{ID: id, Name: m["name"], Hash: m["hash"], Scopes: scopes, CreatedAt: i64(m["created_at"]), ExpiresAt: i64(m["expires_at"]), RevokedAt: i64(m["revoked_at"])}
+}
+
+func containsString(values []string, wanted string) bool {
+	for _, value := range values {
+		if value == wanted {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Store) SaveCreatedReceipt(ctx context.Context, receipt CreatedReceipt, ttl time.Duration) error {

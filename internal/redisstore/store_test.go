@@ -88,6 +88,45 @@ func TestClaimIsAtomicAndWipesPayloadFields(t *testing.T) {
 	}
 }
 
+func TestAPIKeyIsOneTimePresentedScopedRevocableAndExpiring(t *testing.T) {
+	store, _ := newTestStore(t)
+	ctx := context.Background()
+	key, value, err := store.CreateAPIKey(ctx, "reporting", []string{"reports:read"}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if key.Hash == "" || value == "" {
+		t.Fatal("API key was not generated")
+	}
+	if _, err := store.AuthenticateAPIKey(ctx, value, "admin"); !errors.Is(err, ErrInvalidAPIKey) {
+		t.Fatalf("wrong scope error = %v", err)
+	}
+	authenticated, err := store.AuthenticateAPIKey(ctx, value, "reports:read")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if authenticated.ID != key.ID || authenticated.Name != "reporting" {
+		t.Fatalf("authenticated key = %#v", authenticated)
+	}
+	if err := store.RevokeAPIKey(ctx, key.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.AuthenticateAPIKey(ctx, value, "reports:read"); !errors.Is(err, ErrInvalidAPIKey) {
+		t.Fatalf("revoked key error = %v", err)
+	}
+
+	expiring, value, err := store.CreateAPIKey(ctx, "temporary", []string{"reports:read"}, time.Now().Add(-time.Minute).Unix())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.AuthenticateAPIKey(ctx, value, "reports:read"); !errors.Is(err, ErrInvalidAPIKey) {
+		t.Fatalf("expired key error = %v", err)
+	}
+	if expiring.ID == key.ID {
+		t.Fatal("API key IDs were duplicated")
+	}
+}
+
 func TestFailureThrottleBlocksAtLimitAndResets(t *testing.T) {
 	store, server := newTestStore(t)
 	ctx := context.Background()

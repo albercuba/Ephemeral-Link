@@ -140,6 +140,7 @@ func (a *App) Routes() http.Handler {
 	r.Get("/brand/favicon", a.favicon)
 	r.Get("/favicon.ico", a.favicon)
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) })
+	r.Get("/api/v1/audit", a.apiAudit)
 	r.Get("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		if err := a.store.Ping(r.Context()); err != nil {
 			http.Error(w, "not ready", 503)
@@ -172,6 +173,9 @@ func (a *App) Routes() http.Handler {
 		r.Post("/upload-requests/{id}/download", a.downloadUploadRequestFile)
 		r.Get("/created", a.created)
 		r.Get("/admin", a.admin)
+		r.Get("/admin/api-keys", a.adminAPIKeys)
+		r.Post("/admin/api-keys", a.adminCreateAPIKey)
+		r.Post("/admin/api-keys/{id}/revoke", a.adminRevokeAPIKey)
 		r.Get("/admin/audit.csv", a.adminAuditCSV)
 		r.Post("/admin/links/{id}/burn", a.adminBurnLink)
 		r.Post("/admin/upload-requests/{id}/burn", a.adminBurnUploadRequest)
