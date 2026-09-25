@@ -91,6 +91,10 @@ Important:
 | `SECURE_COOKIES` | Set to `true` when served via HTTPS. |
 | `TRUSTED_PROXIES` | Comma-separated proxy IPs/CIDRs allowed to supply `X-Forwarded-For` / `X-Real-IP`. Leave empty when no trusted reverse proxy is in front of the app. |
 
+## Custom domains
+
+Set `CUSTOM_DOMAINS` to a comma-separated exact hostname allowlist, for example `links.example.com,secure.example.net`. When a request arrives with an allowlisted `Host`, generated links use that host; arbitrary or untrusted `Host` headers always fall back to `APP_BASE_URL`. Configure TLS for every custom domain and keep the application behind the trusted reverse proxy.
+
 ## Reverse proxy and TLS
 
 Run Ephemeral Link behind a TLS reverse proxy such as Caddy, Nginx, Traefik, or a cloud load balancer.

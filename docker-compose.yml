@@ -17,6 +17,7 @@ services:
       DEFAULT_LANGUAGE: ${DEFAULT_LANGUAGE:-en}
       SECURE_COOKIES: ${SECURE_COOKIES:-false}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      CUSTOM_DOMAINS: ${CUSTOM_DOMAINS:-}
     volumes:
       - app_storage:/app/data/storage
     read_only: true

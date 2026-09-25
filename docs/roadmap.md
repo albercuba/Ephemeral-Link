@@ -246,7 +246,7 @@ These are larger feature goals after the hardening roadmap:
 - [ ] S3-compatible encrypted file storage backend.
 - [x] Scoped, revocable REST API keys.
 - [ ] User/workspace isolation.
-- [ ] Custom domains.
+- [x] Custom domains.
 - [x] Expanded administrative reporting.
 
-API-key reporting currently exposes metadata-only audit events through `/api/v1/audit`; workspace isolation, S3 storage, and custom-domain support remain intentionally deferred because they require deployment and tenancy design decisions.
+API-key reporting currently exposes metadata-only audit events through `/api/v1/audit`; workspace isolation and S3 storage remain intentionally deferred because they require deployment and tenancy design decisions. Custom-domain support uses an exact `CUSTOM_DOMAINS` allowlist with `APP_BASE_URL` fallback.

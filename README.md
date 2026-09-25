@@ -146,6 +146,7 @@ go test ./...
 | `ENCRYPTION_MASTER_KEY` | Required base64-encoded 32-byte master key, optionally prefixed with `base64:`. |
 - `RATE_LIMIT_PER_MINUTE` | Per-IP request limit. |
 | `TRUSTED_PROXIES` | Optional comma-separated trusted reverse proxy IPs/CIDRs. `X-Forwarded-For` and `X-Real-IP` are ignored unless the direct peer is trusted. |
+| `CUSTOM_DOMAINS` | Optional comma-separated hostnames allowed to replace `APP_BASE_URL` when generating links. Hosts are matched exactly; unallowlisted `Host` headers use `APP_BASE_URL`. |
 | `ALLOWED_LANGUAGES` | Comma-separated language list, default `en,de`. |
 | `DEFAULT_LANGUAGE` | Default UI language, default `en`. |
 | `SECURE_COOKIES` | Set `true` behind HTTPS in production. |

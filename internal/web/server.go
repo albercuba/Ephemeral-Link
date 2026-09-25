@@ -16,6 +16,7 @@ import (
 	"net"
 	"net/http"
 	"net/mail"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -276,7 +277,7 @@ func (a *App) createText(w http.ResponseWriter, r *http.Request) {
 		a.bad(w, r, err)
 		return
 	}
-	link := strings.TrimRight(a.cfg.AppBaseURL, "/") + "/s/" + item.ID
+	link := a.publicBaseURL(r) + "/s/" + item.ID
 	emailStatus, ok := a.sendCreatedLinkIfRequested(w, r, item, link, "text")
 	if !ok {
 		return
@@ -341,7 +342,7 @@ func (a *App) createFile(w http.ResponseWriter, r *http.Request) {
 		a.bad(w, r, err)
 		return
 	}
-	link := strings.TrimRight(a.cfg.AppBaseURL, "/") + "/f/" + item.ID
+	link := a.publicBaseURL(r) + "/f/" + item.ID
 	emailStatus, ok := a.sendCreatedLinkIfRequested(w, r, item, link, "file")
 	if !ok {
 		return
@@ -393,7 +394,7 @@ func (a *App) createUploadRequest(w http.ResponseWriter, r *http.Request) {
 		a.bad(w, r, err)
 		return
 	}
-	link := strings.TrimRight(a.cfg.AppBaseURL, "/") + "/upload/" + id
+	link := a.publicBaseURL(r) + "/upload/" + id
 	if delivery == "email" {
 		if err := a.sendUploadRequestEmail(r.Context(), a.lang(r), recipient, link, displayUser(user), req.Message); err != nil {
 			a.bad(w, r, err)
@@ -506,7 +507,7 @@ func (a *App) submitUploadRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.FormValue("notify_requester") == "on" && req.RequesterEmail != "" {
-		link := strings.TrimRight(a.cfg.AppBaseURL, "/") + "/f/" + item.ID
+		link := a.publicBaseURL(r) + "/f/" + item.ID
 		if err := a.sendUploadNotificationEmail(r.Context(), a.lang(r), req.RequesterEmail, link); err != nil {
 			a.log.Warn("upload notification failed", "error", err)
 		}
@@ -763,8 +764,33 @@ func (a *App) sendCreatedLinkIfRequested(w http.ResponseWriter, r *http.Request,
 	return "sent", true
 }
 
+func (a *App) publicBaseURL(r *http.Request) string {
+	fallback := strings.TrimRight(a.cfg.AppBaseURL, "/")
+	parsed, err := url.Parse(fallback)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" || r == nil {
+		return fallback
+	}
+	requestHost := strings.ToLower(strings.TrimSpace(r.Host))
+	if host, _, splitErr := net.SplitHostPort(requestHost); splitErr == nil {
+		requestHost = host
+	}
+	requestHost = strings.TrimSuffix(requestHost, ".")
+	for _, allowed := range a.cfg.CustomDomains {
+		allowed = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(allowed), "."))
+		if allowed == "" || allowed != requestHost {
+			continue
+		}
+		parsed.Host = r.Host
+		if a.cfg.SecureCookies || r.TLS != nil {
+			parsed.Scheme = "https"
+		}
+		return strings.TrimRight(parsed.String(), "/")
+	}
+	return fallback
+}
+
 func (a *App) redirectCreated(w http.ResponseWriter, r *http.Request, path string, item redisstore.Item, emailStatus string) {
-	link := strings.TrimRight(a.cfg.AppBaseURL, "/") + path
+	link := a.publicBaseURL(r) + path
 	token, err := sec.Token()
 	if err != nil {
 		a.bad(w, r, err)

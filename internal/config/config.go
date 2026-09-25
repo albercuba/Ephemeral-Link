@@ -10,19 +10,20 @@ import (
 )
 
 type Config struct {
-	AppBaseURL         string
-	RedisURL           string
-	StoragePath        string
-	MaxTextSecretSize  int64
-	MaxFileSize        int64
-	DefaultTTL         time.Duration
-	MaxTTL             time.Duration
+	AppBaseURL          string
+	RedisURL            string
+	StoragePath         string
+	MaxTextSecretSize   int64
+	MaxFileSize         int64
+	DefaultTTL          time.Duration
+	MaxTTL              time.Duration
 	EncryptionMasterKey []byte
-	RateLimitPerMinute int
-	AllowedLanguages   []string
-	DefaultLanguage    string
-	SecureCookies      bool
-	TrustedProxies     []string
+	RateLimitPerMinute  int
+	AllowedLanguages    []string
+	DefaultLanguage     string
+	SecureCookies       bool
+	TrustedProxies      []string
+	CustomDomains       []string
 }
 
 func Load() (Config, error) {
@@ -39,6 +40,7 @@ func Load() (Config, error) {
 		DefaultLanguage:    env("DEFAULT_LANGUAGE", "en"),
 		SecureCookies:      strings.EqualFold(env("SECURE_COOKIES", "false"), "true"),
 		TrustedProxies:     split(env("TRUSTED_PROXIES", "")),
+		CustomDomains:      split(env("CUSTOM_DOMAINS", "")),
 	}
 	key, err := loadMasterKey(env("ENCRYPTION_MASTER_KEY", ""))
 	if err != nil {
@@ -68,6 +70,31 @@ func loadMasterKey(raw string) ([]byte, error) {
 	return key, nil
 }
 
-func env(k, d string) string { if v := strings.TrimSpace(os.Getenv(k)); v != "" { return v }; return d }
-func envInt64(k string, d int64) int64 { v := strings.TrimSpace(os.Getenv(k)); if v == "" { return d }; n, err := strconv.ParseInt(v, 10, 64); if err != nil { return d }; return n }
-func split(v string) []string { parts := strings.Split(v, ","); out := make([]string, 0, len(parts)); for _, p := range parts { p = strings.TrimSpace(p); if p != "" { out = append(out, p) } }; return out }
+func env(k, d string) string {
+	if v := strings.TrimSpace(os.Getenv(k)); v != "" {
+		return v
+	}
+	return d
+}
+func envInt64(k string, d int64) int64 {
+	v := strings.TrimSpace(os.Getenv(k))
+	if v == "" {
+		return d
+	}
+	n, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		return d
+	}
+	return n
+}
+func split(v string) []string {
+	parts := strings.Split(v, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}

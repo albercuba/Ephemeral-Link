@@ -44,6 +44,20 @@ func withRouteID(request *http.Request, id string) *http.Request {
 	return request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, route))
 }
 
+func TestPublicBaseURLUsesOnlyAllowlistedCustomDomains(t *testing.T) {
+	app, _, _, _ := newHandlerTestApp(t)
+	app.cfg.CustomDomains = []string{"share.example.com"}
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	request.Host = "share.example.com"
+	if got := app.publicBaseURL(request); got != "https://share.example.com" {
+		t.Fatalf("custom public base URL = %q", got)
+	}
+	request.Host = "attacker.example.com"
+	if got := app.publicBaseURL(request); got != "https://links.example.test" {
+		t.Fatalf("unallowlisted public base URL = %q", got)
+	}
+}
+
 func TestMigrateLegacyMicrosoftUserDoesNotMergeLocalAccounts(t *testing.T) {
 	app, store, _, _ := newHandlerTestApp(t)
 	ctx := context.Background()
