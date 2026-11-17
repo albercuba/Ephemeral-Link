@@ -139,11 +139,8 @@ textarea {
 
 .theme-toggle,
 .lang-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 3rem;
-    height: 3rem;
+    width: 2.25rem;
+    height: 2.25rem;
     padding: 0;
     border: 0;
     border-radius: var(--radius);
@@ -171,19 +168,10 @@ textarea {
     color: var(--el-orange, var(--accent));
 }
 
-.theme-toggle {
-    width: 3rem;
-    height: 3rem;
-}
-
-.lang-toggle {
-    width: 2.25rem;
-    height: 2.25rem;
-}
-
-.theme-toggle i {
+.theme-toggle i,
+.lang-toggle .fa-language {
     color: var(--muted);
-    font-size: 1.35rem;
+    font-size: 1.05rem;
     line-height: 1;
     pointer-events: none;
 }
@@ -798,7 +786,7 @@ textarea,
 }
 
 .nav-actions a {
-    color: #172033;
+    color: var(--muted);
     text-decoration: none;
 }
 
@@ -1610,13 +1598,32 @@ textarea,
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: inherit;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--muted);
     text-decoration: none;
 }
 
 .icon-nav-action .fa-solid {
     font-size: 1.05rem;
     line-height: 1;
+}
+
+.nav-actions .icon-nav-action:hover,
+.nav-actions .icon-nav-action:focus-visible,
+.nav-actions .icon-nav-action.active,
+.lang.open .icon-nav-action {
+    background: color-mix(in srgb, var(--el-orange, var(--accent)) 12%, transparent);
+    color: var(--el-orange, var(--accent));
+}
+
+.nav-actions .icon-nav-action:focus-visible {
+    outline: 2px solid var(--el-orange, var(--accent));
+    outline-offset: 2px;
 }
 
 .sr-only {
@@ -1631,13 +1638,10 @@ textarea,
     border: 0;
 }
 
-.logout-form button {
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: #172033;
+.logout-form button.icon-nav-action {
+    color: var(--muted);
     font-size: 0.9rem;
-    font-weight: 1;
+    font-weight: 400;
 }
 
 .auth-card,
@@ -1782,8 +1786,6 @@ textarea,
 }
 
 html[data-theme="dark"] .brand-copy strong,
-html[data-theme="dark"] .nav-actions a,
-html[data-theme="dark"] .logout-form button,
 html[data-theme="dark"] .el-hero h1,
 html[data-theme="dark"] .el-hero p,
 html[data-theme="dark"] .toggle-label,

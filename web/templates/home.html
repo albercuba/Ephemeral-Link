@@ -44,6 +44,8 @@
                         id="home-admin-link"
                         class="icon-nav-action"
                         href="/admin"
+                        aria-label="{{call .T "settings"}}"
+                        title="{{call .T "settings"}}"
                         ><i class="fa-solid fa-gear" aria-hidden="true"></i><span class="sr-only">{{call .T "settings"}}</span></a
                     >{{end}}
                     <form
@@ -60,7 +62,7 @@
                     {{end}}
                     <button
                         id="home-theme-toggle"
-                        class="theme-toggle"
+                        class="icon-nav-action theme-toggle"
                         type="button"
                         aria-label="{{call .T "theme_toggle_label"}}"
                         aria-pressed="false"
@@ -83,7 +85,7 @@
                         />
                         <button
                             id="home-language-toggle"
-                            class="lang-toggle"
+                            class="icon-nav-action lang-toggle"
                             type="button"
                             aria-label="{{call .T "language_label"}}"
                             aria-haspopup="listbox"
