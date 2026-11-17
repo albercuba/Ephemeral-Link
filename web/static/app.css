@@ -106,6 +106,18 @@ body {
     object-fit: contain;
 }
 
+.brand-logo-dark {
+    display: none;
+}
+
+html[data-theme="dark"] .brand-logo-light {
+    display: none;
+}
+
+html[data-theme="dark"] .brand-logo-dark {
+    display: inline-block;
+}
+
 .lang select,
 select,
 input,

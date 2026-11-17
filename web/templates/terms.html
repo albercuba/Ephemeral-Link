@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title id="terms-title">{{.Title}}</title>
-  {{if .LogoURL}}<link rel="icon" href="/brand/favicon">{{end}}
+  <link rel="icon" href="/favicon.ico">
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body id="terms-body">
   <main id="terms-main" class="page narrow legal-page">
     <a id="terms-brand-link" class="brand el-brand" href="/">
-      {{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call .T "app_name"}}">{{end}}
+      {{template "brand_mark" .}}
       <span class="brand-copy"><strong>{{call .T "app_name"}}</strong></span>
     </a>
     <article id="terms-card" class="card legal-card markdown-content">{{.LegalHTML}}</article>

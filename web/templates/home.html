@@ -9,7 +9,7 @@
         />
         <meta id="home-meta-robots" name="robots" content="noindex, nofollow" />
         <title id="home-title">{{.Title}}</title>
-        {{if .LogoURL}}<link id="home-favicon" rel="icon" href="/brand/favicon" />{{end}}
+        <link id="home-favicon" rel="icon" href="/favicon.ico" />
 
         <link id="home-stylesheet" rel="stylesheet" href="/static/app.css" />
         <script id="home-script" src="/static/app.js" defer></script>
@@ -18,7 +18,7 @@
         <main id="home-main" class="page el-page">
             <nav id="home-nav" class="nav el-nav">
                 <a id="home-brand-link" class="brand el-brand" href="/">
-                    {{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call .T "app_name"}}">{{end}}
+                    {{template "brand_mark" .}}
                     <span id="home-brand-copy" class="brand-copy"
                         ><strong id="home-brand-name"
                             >{{call .T "app_name"}}</strong

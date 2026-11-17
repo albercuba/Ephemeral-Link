@@ -1,3 +1,5 @@
+{{define "brand_mark"}}{{if .LogoURL}}<img class="brand-logo" src="{{.LogoURL}}" alt="{{call .T "app_name"}}">{{else}}<img class="brand-logo brand-logo-light" src="/static/ephemeral-link-cube-fluent.svg" alt="{{call .T "app_name"}}"><img class="brand-logo brand-logo-dark" src="/static/ephemeral-link-cube-fluent-gray.svg" alt="" aria-hidden="true">{{end}}{{end}}
+
 {{define "footer"}}
 <footer class="app-footer">
     <span>{{call .T "footer_copyright"}} {{.Version}}</span>

@@ -888,7 +888,7 @@ func (a *App) favicon(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, a.logoPath())
 		return
 	}
-	http.NotFound(w, r)
+	http.ServeFile(w, r, "web/static/favicon.svg")
 }
 
 func (a *App) securityHeaders(next http.Handler) http.Handler {
