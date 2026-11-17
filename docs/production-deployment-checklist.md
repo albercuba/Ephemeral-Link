@@ -73,6 +73,7 @@ docker compose config
 Check that:
 
 - [ ] `APP_BASE_URL` is the public HTTPS URL.
+- [ ] `APP_BIND_ADDRESS` is restricted to `127.0.0.1` when the reverse proxy runs on the host; use `0.0.0.0` only when a containerized reverse proxy requires it.
 - [ ] `SECURE_COOKIES` is `true`.
 - [ ] `ENCRYPTION_MASTER_KEY` is set from a real secret.
 - [ ] `REDIS_URL` points to the private Redis/Valkey service or managed Redis endpoint.
@@ -136,7 +137,7 @@ If Microsoft login is enabled:
 
 ### Local Active Directory
 
-- [ ] Test the configured LDAP/LDAPS endpoint and user bind from the app container before enabling local AD login. Prefer LDAPS in production.
+- [ ] Test the configured LDAPS endpoint and user bind from the app container before enabling local AD login. Plaintext LDAP endpoints are rejected.
 
 ## 8. Perform smoke tests
 

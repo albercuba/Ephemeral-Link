@@ -198,7 +198,7 @@ The optional Local AD integration authenticates users against the configured LDA
 - `Bind DN` and `Bind password`: a least-privilege service account used only to search the directory. The bind password is encrypted with `ENCRYPTION_MASTER_KEY` before it is stored in Redis.
 - Enable the integration only after testing the endpoint and firewall path from the app container.
 
-User authentication searches by `sAMAccountName`, then binds as the matched user with the submitted password. Passwords and directory tokens are never logged or stored. If a plain `ldap://` URL is used, traffic is not encrypted; prefer LDAPS and restrict the directory network path.
+User authentication searches by `sAMAccountName`, then binds as the matched user with the submitted password. Passwords and directory tokens are never logged or stored. Active Directory authentication requires an `ldaps://` endpoint; plaintext `ldap://` URLs are rejected.
 
 ## Email delivery
 

@@ -450,7 +450,13 @@ func (s *Store) CreateWorkspaceInvitation(ctx context.Context, workspace, email,
 	}
 	created := time.Now().Unix()
 	invitation := WorkspaceInvitation{ID: hashAPIKey(value)[:16], WorkspaceID: workspaceID(workspace), Email: strings.ToLower(strings.TrimSpace(email)), Role: role, CreatedAt: created, ExpiresAt: expiresAt}
-	if err := s.rdb.HSet(ctx, invitationKey(hashAPIKey(value)), map[string]any{"id": invitation.ID, "workspace_id": invitation.WorkspaceID, "email": invitation.Email, "role": role, "created_at": created, "expires_at": expiresAt}).Err(); err != nil {
+	key := invitationKey(hashAPIKey(value))
+	pipe := s.rdb.TxPipeline()
+	pipe.HSet(ctx, key, map[string]any{"id": invitation.ID, "workspace_id": invitation.WorkspaceID, "email": invitation.Email, "role": role, "created_at": created, "expires_at": expiresAt})
+	if ttl := time.Until(time.Unix(expiresAt, 0)); ttl > 0 {
+		pipe.Expire(ctx, key, ttl)
+	}
+	if _, err := pipe.Exec(ctx); err != nil {
 		return WorkspaceInvitation{}, "", err
 	}
 	return invitation, value, nil
@@ -464,15 +470,36 @@ func (s *Store) GetWorkspaceInvitation(ctx context.Context, value string) (Works
 	return WorkspaceInvitation{ID: m["id"], WorkspaceID: workspaceID(m["workspace_id"]), Email: m["email"], Role: m["role"], CreatedAt: i64(m["created_at"]), ExpiresAt: i64(m["expires_at"])}, nil
 }
 
+var acceptWorkspaceInvitationScript = redis.NewScript(`
+local k = KEYS[1]
+if redis.call('EXISTS', k) == 0 then return nil end
+local expires = tonumber(redis.call('HGET', k, 'expires_at') or '0')
+if expires > 0 and expires <= tonumber(ARGV[1]) then
+  redis.call('DEL', k)
+  return nil
+end
+local invitation = redis.call('HGETALL', k)
+redis.call('DEL', k)
+return invitation
+`)
+
 func (s *Store) AcceptWorkspaceInvitation(ctx context.Context, value string) (WorkspaceInvitation, error) {
-	invitation, err := s.GetWorkspaceInvitation(ctx, value)
+	res, err := acceptWorkspaceInvitationScript.Run(ctx, s.rdb, []string{invitationKey(hashAPIKey(value))}, time.Now().Unix()).Result()
+	if err == redis.Nil || res == nil {
+		return WorkspaceInvitation{}, ErrInvalidAPIKey
+	}
 	if err != nil {
 		return WorkspaceInvitation{}, err
 	}
-	if err := s.rdb.Del(ctx, invitationKey(hashAPIKey(value))).Err(); err != nil {
-		return WorkspaceInvitation{}, err
+	arr, ok := res.([]interface{})
+	if !ok {
+		return WorkspaceInvitation{}, fmt.Errorf("unexpected workspace invitation response")
 	}
-	return invitation, nil
+	m := make(map[string]string, len(arr)/2)
+	for i := 0; i+1 < len(arr); i += 2 {
+		m[fmt.Sprint(arr[i])] = fmt.Sprint(arr[i+1])
+	}
+	return WorkspaceInvitation{ID: m["id"], WorkspaceID: workspaceID(m["workspace_id"]), Email: m["email"], Role: m["role"], CreatedAt: i64(m["created_at"]), ExpiresAt: i64(m["expires_at"])}, nil
 }
 
 func newAPIKeyValue() (string, error) {

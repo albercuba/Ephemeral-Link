@@ -130,6 +130,45 @@ func TestWorkspaceInvitationIsEmailBoundAndSingleUse(t *testing.T) {
 	}
 }
 
+func TestWorkspaceInvitationConcurrentAcceptanceIsSingleUse(t *testing.T) {
+	store, _ := newTestStore(t)
+	ctx := context.Background()
+	_, token, err := store.CreateWorkspaceInvitation(ctx, "team-a", "member@example.com", "user", time.Now().Add(time.Hour).Unix())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const attempts = 16
+	results := make(chan error, attempts)
+	var wg sync.WaitGroup
+	for range attempts {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := store.AcceptWorkspaceInvitation(ctx, token)
+			results <- err
+		}()
+	}
+	wg.Wait()
+	close(results)
+
+	accepted := 0
+	invalid := 0
+	for err := range results {
+		switch {
+		case err == nil:
+			accepted++
+		case errors.Is(err, ErrInvalidAPIKey):
+			invalid++
+		default:
+			t.Fatalf("invitation acceptance failed unexpectedly: %v", err)
+		}
+	}
+	if accepted != 1 || invalid != attempts-1 {
+		t.Fatalf("acceptances: accepted=%d invalid=%d, want one accepted and %d invalid", accepted, invalid, attempts-1)
+	}
+}
+
 func TestAPIKeyIsOneTimePresentedScopedRevocableAndExpiring(t *testing.T) {
 	store, _ := newTestStore(t)
 	ctx := context.Background()

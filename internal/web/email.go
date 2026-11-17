@@ -21,6 +21,8 @@ import (
 	"ephemeral-link/internal/redisstore"
 )
 
+var externalHTTPClient = &http.Client{Timeout: 15 * time.Second}
+
 func (a *App) sendUploadRequestEmail(ctx context.Context, lang, to, link, requesterName, message string) error {
 	lang = a.i18n.Normalize(lang)
 	subject := a.i18n.T(lang, "upload_request_email_subject")
@@ -41,20 +43,23 @@ func (a *App) sendCreatedLinkEmail(ctx context.Context, lang, to, link, creatorN
 	subject := fmt.Sprintf(a.i18n.T(lang, "created_link_email_subject_named"), strings.TrimSpace(creatorName))
 	plain := fmt.Sprintf(a.i18n.T(lang, "created_link_email_body"), creatorName, localizedKind, link) + "\n\n" + a.i18n.T(lang, "link_security_note")
 	htmlBody := createdLinkHTML(createdLinkEmailView{
-		CreatorName: creatorName,
-		Kind: localizedKind,
-		Link: link,
+		CreatorName:  creatorName,
+		Kind:         localizedKind,
+		Link:         link,
 		SecurityNote: a.i18n.T(lang, "link_security_note"),
-		Heading: a.i18n.T(lang, "created_link_email_heading"),
-		Intro: fmt.Sprintf(a.i18n.T(lang, "created_link_email_intro"), creatorName, localizedKind),
-		Description: a.i18n.T(lang, "created_link_email_description"),
-		Button: a.i18n.T(lang, "created_link_email_button"),
-		Fallback: a.i18n.T(lang, "created_link_email_fallback"),
+		Heading:      a.i18n.T(lang, "created_link_email_heading"),
+		Intro:        fmt.Sprintf(a.i18n.T(lang, "created_link_email_intro"), creatorName, localizedKind),
+		Description:  a.i18n.T(lang, "created_link_email_description"),
+		Button:       a.i18n.T(lang, "created_link_email_button"),
+		Fallback:     a.i18n.T(lang, "created_link_email_fallback"),
 	})
 	return a.sendEmailContent(ctx, to, subject, emailContent{Plain: plain, HTML: htmlBody})
 }
 
-type emailContent struct { Plain string; HTML string }
+type emailContent struct {
+	Plain string
+	HTML  string
+}
 
 func (a *App) sendEmail(ctx context.Context, to, subject, body string) error {
 	return a.sendEmailContent(ctx, to, subject, emailContent{Plain: body})
@@ -71,7 +76,7 @@ func (a *App) sendEmailContent(ctx context.Context, to, subject string, content 
 		return err
 	}
 	if cfg.GraphEnabled {
-		return sendGraph(ctx, http.DefaultClient, cfg, to, subject, content)
+		return sendGraph(ctx, externalHTTPClient, cfg, to, subject, content)
 	}
 	if !cfg.SMTPEnabled {
 		return errors.New("email delivery is not enabled")
@@ -206,15 +211,15 @@ func buildMIMEMessage(from, to, subject string, content emailContent) []byte {
 }
 
 type createdLinkEmailView struct {
-	CreatorName string
-	Kind string
-	Link string
+	CreatorName  string
+	Kind         string
+	Link         string
 	SecurityNote string
-	Heading string
-	Intro string
-	Description string
-	Button string
-	Fallback string
+	Heading      string
+	Intro        string
+	Description  string
+	Button       string
+	Fallback     string
 }
 
 func createdLinkHTML(view createdLinkEmailView) string {

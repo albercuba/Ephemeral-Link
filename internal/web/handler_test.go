@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -42,6 +43,36 @@ func withRouteID(request *http.Request, id string) *http.Request {
 	route := chi.NewRouteContext()
 	route.URLParams.Add("id", id)
 	return request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, route))
+}
+
+func TestSecureLDAPEndpointRequiresLDAPS(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{name: "host defaults to ldaps", input: "directory.example.com"},
+		{name: "explicit ldaps", input: "ldaps://directory.example.com"},
+		{name: "plaintext ldap", input: "ldap://directory.example.com", wantErr: true},
+		{name: "unsupported scheme", input: "http://directory.example.com", wantErr: true},
+		{name: "missing host", input: "ldaps://", wantErr: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := secureLDAPEndpoint(test.input)
+			if test.wantErr {
+				if err == nil {
+					t.Fatalf("secureLDAPEndpoint(%q) succeeded with %q", test.input, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.HasPrefix(strings.ToLower(got), "ldaps://") {
+				t.Fatalf("endpoint = %q, want ldaps scheme", got)
+			}
+		})
+	}
 }
 
 func TestPublicBaseURLUsesOnlyAllowlistedCustomDomains(t *testing.T) {

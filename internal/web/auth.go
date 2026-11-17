@@ -372,14 +372,11 @@ func (a *App) authenticateAD(username, password string) (redisstore.User, error)
 	if err != nil || !cfg.ADEnabled || cfg.ADHost == "" || cfg.ADBaseDN == "" {
 		return redisstore.User{}, fmt.Errorf("directory authentication unavailable")
 	}
-	endpoint := strings.TrimSpace(cfg.ADHost)
-	if !strings.Contains(endpoint, "://") {
-		endpoint = "ldaps://" + endpoint
+	endpoint, err := secureLDAPEndpoint(cfg.ADHost)
+	if err != nil {
+		return redisstore.User{}, err
 	}
-	options := []ldap.DialOpt{}
-	if strings.HasPrefix(strings.ToLower(endpoint), "ldaps://") {
-		options = append(options, ldap.DialWithTLSConfig(&tls.Config{MinVersion: tls.VersionTLS12}))
-	}
+	options := []ldap.DialOpt{ldap.DialWithTLSConfig(&tls.Config{MinVersion: tls.VersionTLS12})}
 	conn, err := ldap.DialURL(endpoint, options...)
 	if err != nil {
 		return redisstore.User{}, fmt.Errorf("directory unavailable")
@@ -408,6 +405,21 @@ func (a *App) authenticateAD(username, password string) (redisstore.User, error)
 		last = entry.GetAttributeValue("sn")
 	}
 	return redisstore.User{Username: "ad:" + strings.ToLower(username), Role: "user", FirstName: first, LastName: last, Email: entry.GetAttributeValue("mail"), AuthProvider: "ad", ExternalID: entry.DN, CreatedAt: time.Now().Unix()}, nil
+}
+
+func secureLDAPEndpoint(raw string) (string, error) {
+	endpoint := strings.TrimSpace(raw)
+	if endpoint == "" {
+		return "", fmt.Errorf("directory authentication unavailable")
+	}
+	if !strings.Contains(endpoint, "://") {
+		endpoint = "ldaps://" + endpoint
+	}
+	parsed, err := url.Parse(endpoint)
+	if err != nil || !strings.EqualFold(parsed.Scheme, "ldaps") || parsed.Host == "" {
+		return "", fmt.Errorf("directory authentication requires LDAPS")
+	}
+	return endpoint, nil
 }
 
 func (a *App) requireAuth(next http.Handler) http.Handler {
@@ -1276,7 +1288,7 @@ func exchangeMicrosoftCode(ctx context.Context, cfg redisstore.IntegrationConfig
 		return microsoftTokenResponse{}, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := externalHTTPClient.Do(req)
 	if err != nil {
 		return microsoftTokenResponse{}, err
 	}
@@ -1407,7 +1419,7 @@ func microsoftSigningKey(ctx context.Context, cfg redisstore.IntegrationConfig, 
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := externalHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -141,6 +141,7 @@ go test ./...
 | Variable | Description |
 | --- | --- |
 | `APP_BASE_URL` | Public URL used when generating single-use links. |
+| `APP_BIND_ADDRESS` | Docker host bind address for port 8080; defaults to `127.0.0.1`. Set to `0.0.0.0` only when a networked reverse proxy must reach the published port. |
 | `REDIS_URL` | Redis/Valkey connection URL. |
 | `STORAGE_PATH` | Directory for encrypted file payloads when `STORAGE_BACKEND=local`. Must not be public web root. |
 | `STORAGE_BACKEND` | `local` (default) or `s3`. |
