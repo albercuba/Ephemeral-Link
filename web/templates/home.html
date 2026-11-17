@@ -41,8 +41,9 @@
                     >
                     {{if eq .User.Role "administrator"}}<a
                         id="home-admin-link"
+                        class="icon-nav-action"
                         href="/admin"
-                        >{{call .T "settings"}}</a
+                        ><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z"/><path d="m19.4 13.5 1.1.85-1.5 2.6-1.3-.5a7.8 7.8 0 0 1-1.8 1.05L15.7 19h-3l-.2-1.5a7.8 7.8 0 0 1-1.8-1.05l-1.3.5-1.5-2.6 1.1-.85a7.5 7.5 0 0 1 0-2.1l-1.1-.85 1.5-2.6 1.3.5a7.8 7.8 0 0 1 1.8-1.05L12.7 6h3l.2 1.5a7.8 7.8 0 0 1 1.8 1.05l1.3-.5 1.5 2.6-1.1.85a7.5 7.5 0 0 1 0 2.1Z"/></svg><span class="sr-only">{{call .T "settings"}}</span></a
                     >{{end}}
                     <form
                         id="home-logout-form"
@@ -51,9 +52,7 @@
                         action="/logout"
                     >
                         <input type="hidden" name="csrf" value="{{.CSRF}}" />
-                        <button id="home-logout-button" type="submit">
-                            {{call .T "sign_out"}}
-                        </button>
+                        <button id="home-logout-button" class="icon-nav-action" type="submit" aria-label="{{call .T "sign_out"}}" title="{{call .T "sign_out"}}"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4.5h4.25A1.75 1.75 0 0 1 20 6.25v11.5a1.75 1.75 0 0 1-1.75 1.75H14"/><path d="M11 12h9m-3-3 3 3-3 3"/><path d="M4 12h7"/></svg></button>
                     </form>
                     {{else}}
                     <a id="home-sign-in-link" href="/login">{{call .T "sign_in"}}</a>
