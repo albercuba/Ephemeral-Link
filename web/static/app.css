@@ -101,21 +101,9 @@ body {
 }
 
 .brand-logo {
-    max-height: 2.5rem;
+    max-height: 5.5rem;
     max-width: 12rem;
     object-fit: contain;
-}
-
-.brand-logo-dark {
-    display: none;
-}
-
-html[data-theme="dark"] .brand-logo-light {
-    display: none;
-}
-
-html[data-theme="dark"] .brand-logo-dark {
-    display: inline-block;
 }
 
 .lang select,
