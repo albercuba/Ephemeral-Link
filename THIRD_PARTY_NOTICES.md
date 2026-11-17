@@ -20,8 +20,8 @@ Ephemeral Link is licensed under the MIT License. This file summarizes notable t
 
 ## Fonts and icons
 
-The production UI uses system fonts and local CSS fallback glyphs. It does not load Google Fonts or Font Awesome stylesheets.
+- Font Awesome Free 6.5.2 — bundled locally under `web/static/fontawesome/`; the stylesheet and webfonts are served from the application. Font Awesome icons are licensed CC BY 4.0, fonts SIL OFL 1.1, and code MIT. The complete license text is included in `web/static/fontawesome/LICENSE.txt`.
 
 ## Project assets
 
-- `web/static/favicon.svg` is project-owned Ephemeral Link branding artwork unless replaced by an operator-uploaded logo.
+- `web/static/ephemeral-link-cube-fluent.svg` is the default project-owned application logo and favicon; branding settings may replace the in-page logo with an operator-uploaded image.
