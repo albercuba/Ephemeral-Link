@@ -13,7 +13,9 @@ Effective date: **[Date]**
 
 Thank you for using **[your-domain.tld]** (the **Service**), running the open-source
 Ephemeral Link software. Please read these Terms of Service (the **Terms**) before
-using the Service. Using the Service means you agree to these Terms.
+using the Service. By using the Service, you agree to these Terms to the extent
+permitted by applicable law. If you use the Service on behalf of an organization, you
+confirm that you have authority to bind it.
 
 ## Summary
 
@@ -45,19 +47,27 @@ a one-time link.
 ## B. The Service
 
 Ephemeral Link is a self-hosted "burn after reading" secret-sharing tool. It lets you
-create a link to text or a file that can be viewed or downloaded once, after which it
-is permanently deleted from the server. The underlying software is open source; this
-particular instance is operated independently by us at **[your-domain.tld]**.
+create a link to text or a file that can be viewed or downloaded once. After a valid
+claim, the protected payload is removed from the active service record, while limited
+metadata may remain temporarily for operational cleanup. The underlying software is
+open source; this particular instance is operated independently by us at
+**[your-domain.tld]**.
 
-Because a secret is deleted after being read, downloaded, claimed, or after it expires,
-we cannot recover it once that happens. Do not rely on the Service as permanent storage.
+A valid recipient request claims a secret atomically and may permanently remove its
+protected payload even if the subsequent transfer is interrupted. Expiry and operator
+administrative actions may also remove content. We cannot recover a claimed, expired,
+or deleted secret. Do not rely on the Service as permanent storage; keep an independent
+copy if you need one.
 
 ## C. Accounts
 
 The Service may permit anonymous receipt of one-time links while requiring an account
 to create links or administer the instance. Account holders are responsible for
-keeping credentials confidential and for activity performed through their account.
-Workspace access is limited by the memberships and roles assigned by the operator.
+keeping credentials and API keys confidential, promptly reporting suspected compromise,
+and activity performed through their account or keys. Workspace access is limited by
+the memberships and roles assigned by the operator. The operator may suspend, revoke,
+or delete accounts, sessions, invitations, and API keys for security, legal, or
+operational reasons.
 
 ## D. Acceptable Use
 
@@ -67,8 +77,11 @@ You agree not to use the Service to:
 - transmit malware, exploit code, or content intended to facilitate a cyberattack;
 - transmit child sexual abuse material or content exploiting minors;
 - harass, threaten, or facilitate harassment of any person;
-- infringe intellectual-property or privacy rights; or
-- disrupt, overload, or gain unauthorized access to the Service or its infrastructure.
+- infringe intellectual-property or privacy rights;
+- send unsolicited or deceptive messages, including through configured email delivery;
+- share another person's confidential information without authorization; or
+- disrupt, overload, probe, or gain unauthorized access to the Service or its
+  infrastructure.
 
 We may remove content or block access that we reasonably believe violates this section
 or applicable law. Because secrets are encrypted and ephemeral, proactive review may
@@ -76,15 +89,18 @@ be limited.
 
 ## E. Content Responsibility
 
-You are solely responsible for the content of any secret you create and for ensuring
-you have the right to share it. We do not review secret content before transmission
+You are solely responsible for the content of any secret you create, ensuring you have
+the right to share it, and protecting the generated link and any passphrase. You are
+also responsible for confirming that any recipient address and message used for email
+delivery are accurate and lawful. We do not review secret content before transmission
 and are not responsible for its accuracy, legality, or consequences of disclosure.
 
 ## F. Availability and Changes
 
-We aim to keep the Service available but do not guarantee uninterrupted uptime. We may
-suspend, modify, or discontinue the Service for maintenance, abuse prevention, or legal
-compliance, with or without notice.
+We aim to keep the Service available but do not guarantee uninterrupted uptime. The
+Service depends on infrastructure and optional providers that may be unavailable or
+change independently. We may suspend, modify, or discontinue the Service for
+maintenance, abuse prevention, security, or legal compliance, with or without notice.
 
 ## G. Intellectual Property
 

@@ -17,8 +17,9 @@ Effective date: **[Date]**
 
 This Privacy Policy explains how **[Operator name / company]** ("**we**," "**us**")
 process personal data when you use Ephemeral Link at **[your-domain.tld]** (the
-"**Service**"). We built the Service to minimize the data we hold about you; this
-policy tells you exactly what little there is.
+"**Service**"). We built the Service to minimize the data we hold about you. This policy describes the
+categories of data processed by a standard deployment; the operator must adapt it to
+actual hosting, logging, integrations, and retention settings before publication.
 
 ## Summary
 
@@ -48,66 +49,104 @@ policy tells you exactly what little there is.
 
 ## B. What the Service Does
 
-Ephemeral Link lets a sender create a "secret" — a short piece of text — behind a
-one-time link. Once the recipient opens that link, the secret is deleted from our
-servers and cannot be viewed again. We never intend to read, store long-term, or
-otherwise access the content of your secrets.
+Ephemeral Link lets a sender create a short text secret or encrypted file behind a
+one-time link. A valid recipient request atomically claims the item; the protected
+payload is then removed from the application record and the item cannot be claimed
+again. A failed transfer does not restore a claimed item. Expired items are removed by
+scheduled cleanup. We do not use secret contents for advertising, profiling, or
+analytics, but the operator may technically access data needed to operate, secure, or
+restore the deployment.
 
 ## C. What Data We Process
 
 We keep this as small as possible:
 
-- **Secret content.** The text you submit, stored only until it is read once or its
-  expiry time passes, whichever comes first. [Confirm: encrypted at rest? — describe
-  how, matching how your deployment actually works.]
-- **The secret's link/token.** A random identifier generated for each secret so it can
-  be retrieved exactly once.
-- **Technical/log data.** Standard web server logs (IP address, timestamp, user agent,
-  requested URL) generated automatically when you access the Service, kept only for
-  [retention period] for security and abuse-prevention purposes, then deleted.
-- **Accounts.** The Service may process administrator/user account names, email
-  addresses, role information, authentication metadata, and session data when account
-  login or administration features are enabled.
+- **Secret content and files.** Text and files submitted for sharing. In the standard
+  deployment, payloads are encrypted at rest with AES-256-GCM and are retained until
+  successful one-time claim or expiry. File names, MIME types, and file sizes may be
+  stored as item metadata.
+- **Links and item metadata.** Random link identifiers, creation/expiry times, status,
+  workspace, and whether a passphrase is configured. The full generated link may be
+  present temporarily in the browser session history described below.
+- **Upload-request and email data.** If enabled, requester/recipient email addresses,
+  messages, delivery status, and related expiry/status metadata. Configured SMTP or
+  Microsoft Graph providers may receive the recipient address, message, and generated
+  link needed to deliver an email.
+- **Accounts and access data.** Usernames, names, email addresses, roles, workspace
+  memberships, password hashes, external identity-provider identifiers, session
+  records, API-key metadata, and invitation metadata when those features are enabled.
+  The Service does not store local passwords in plaintext. External providers may
+  process authentication data under their own policies.
+- **Security and audit data.** Audit events may include actor, event, target, result,
+  timestamp, source IP address, and short operational details. The standard deployment
+  retains audit records for 90 days, subject to the operator's configuration and
+  backups. Reverse proxies, hosting providers, SMTP/Graph providers, object storage,
+  and other infrastructure may also create their own logs.
 
-We do not run analytics, advertising, or tracking scripts. Adjust this statement if
-that is not true of your deployment.
+The standard application does not run advertising or analytics scripts. The operator
+must update this statement if additional services are installed.
 
 ## D. Legal Basis
 
-Under Art. 6(1) GDPR, we process this data on the following bases:
+Under Art. 6(1) GDPR, the operator should document the applicable basis for the
+specific deployment. Common bases include:
 
-- **Art. 6(1)(b)** — performance of a contract: storing and delivering the secret you
-  ask us to transmit is the core service you're requesting.
-- **Art. 6(1)(f)** — legitimate interests: keeping short-lived server logs to secure
-  the Service against abuse, and our interest in that is limited and time-boxed.
+- **Art. 6(1)(b)** — providing the requested sharing, account, workspace, and email
+  delivery features.
+- **Art. 6(1)(f)** — securing the Service, preventing abuse, maintaining audit trails,
+  and protecting the operator's infrastructure, balanced against the individual's
+  rights.
+- **Art. 6(1)(c)** — complying with legal obligations, where a retention or disclosure
+  is required by law.
+
+Do not publish this section without confirming the operator's actual legal bases and,
+where required, obtaining consent for optional processing.
 
 ## E. Retention and Deletion
 
-- A secret is deleted immediately upon being read, or automatically once its expiry
-  time is reached — whichever happens first. Once deleted, it cannot be recovered.
-- Server logs are deleted after [retention period].
-- [Describe encrypted backup retention, or state that no backups of active payloads are kept.]
+- After a valid one-time claim, the encrypted payload and key material are removed from
+  the active item record. Minimal consumed-item metadata can remain temporarily for
+  operational cleanup; in the standard deployment the Redis record expires after one
+  hour. Expired items are removed according to the configured TTL and cleanup process.
+- Audit records are retained for 90 days in the standard deployment. Confirm the
+  retention of reverse-proxy, host, Redis, object-storage, and email-provider logs:
+  **[insert actual periods]**.
+- Browser session history is cleared when the browser session ends, subject to browser
+  behavior. A theme preference may remain in browser local storage until the user or
+  browser removes it.
+- **[Describe encrypted backup retention, or state that no backups of active payloads
+  are kept. State how deletion requests apply to backups.]**
 
 ## F. Cookies and Local Storage
 
-The Service uses strictly necessary session, CSRF, and language-preference cookies as
-needed for authentication, security, and language selection. It does not use browser
-local storage for advertising or tracking.
+The Service uses strictly necessary cookies for authentication, CSRF protection,
+language preference, and the short-lived created-link receipt flow. The session cookie
+is HttpOnly and uses SameSite protections; the Secure flag depends on the deployment's
+HTTPS configuration. The application also stores the selected light/dark theme in
+browser local storage and may store up to 25 generated-link receipts, including full
+links, in browser session storage to show local history. These browser stores are not
+sent to the Service as analytics, but anyone with access to the browser profile may be
+able to view them. The operator must update this section if consent-managed or third-
+party cookies are added.
 
 ## G. Recipients and Hosting
 
-The Service runs on infrastructure operated by [hosting provider name], with servers
-located in [data center location]. [If applicable, note that a Data Processing
-Agreement (Art. 28 GDPR) is in place.]
+The Service runs on infrastructure operated by **[hosting provider name]**, with
+servers located in **[data center location]**. **[State whether a Data Processing
+Agreement under Art. 28 GDPR is in place.]**
 
-We do not sell, rent, or share secret content with third parties. If you configure
-SMTP, Microsoft Graph, or S3-compatible object storage, update this section with the
-relevant processors and locations.
+The operator may use Redis/Valkey, local encrypted storage or S3-compatible object
+storage, SMTP, Microsoft Graph, directory services, reverse proxies, and hosting
+providers. List each provider, purpose, location, and applicable safeguards here before
+publication. We do not sell personal data or secret content. Providers may process data
+only as needed to provide their configured service and under their own terms and
+privacy policies.
 
 ## H. International Transfers
 
-[Describe whether all processing takes place within the EU/EEA or identify the
-transfer mechanism, such as Standard Contractual Clauses.]
+**[State whether processing stays within the EU/EEA. If data is transferred outside it,
+identify each recipient country and the applicable safeguard, such as an adequacy
+decision or Standard Contractual Clauses.]**
 
 ## I. Your Rights
 
@@ -116,7 +155,9 @@ data portability, or object to processing based on legitimate interests. You may
 lodge a complaint with the supervisory authority in your country or German state.
 
 Because the Service holds short-lived data and secrets self-destruct, some requests
-may already be moot when received. Send requests to the contact below.
+may already be moot when received. The operator may need reasonable information to
+verify a request and protect another person's secret or account. Send requests to the
+contact below.
 
 ## J. Security
 
