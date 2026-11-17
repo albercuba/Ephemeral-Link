@@ -1614,6 +1614,10 @@ textarea,
     text-decoration: none;
 }
 
+.icon-nav-action .fa-solid {
+    font-size: 1.05rem;
+    line-height: 1;
+}
 
 .sr-only {
     position: absolute;
